@@ -1,0 +1,13 @@
+Modelo: Salar-UNet 4 Bandas (RGB+NIR)
+Semilla: 42
+Épocas: 500
+Duración: 205.54 minutos
+Mejor Val IoU: 0.9269
+
+=== TEST SET ===
+Loss:      0.1456
+IoU:       0.9268
+Dice (F1): 0.9620
+Precisión: 0.9660
+Recall:    0.9580
+Accuracy:  0.9621

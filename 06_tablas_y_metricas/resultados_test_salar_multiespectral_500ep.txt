@@ -1,0 +1,13 @@
+Modelo: Salar-UNet Multiespectral (6 bandas: B02, B03, B04, B08, NDVI, SI)
+Semilla: 42
+Épocas: 500
+Duración de Entrenamiento: 240.54 minutos (Clúster GPU Phantom PUCP)
+Mejor Val IoU: 0.9931 (99.31%)
+
+=== EVALUACIÓN EN CONJUNTO DE PRUEBA CIEGO (TEST SET: 488 PARCHES) ===
+Loss:      0.0183
+IoU:       0.9931 (99.31% - Máximo SOTA de la Tesis)
+Dice (F1): 0.9965 (99.65%)
+Precisión: 0.9958 (99.58%)
+Recall:    0.9973 (99.73%)
+Accuracy:  0.9965 (99.65%)
