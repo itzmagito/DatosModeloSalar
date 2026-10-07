@@ -11,7 +11,7 @@
 
 ---
 
-## 📌 Resumen Ejecutivo del Proyecto
+##  Resumen Ejecutivo del Proyecto
 
 Este repositorio constituye el **Anexo Digital Oficial** de la tesis de grado, reuniendo la totalidad de los modelos de Deep Learning desarrollados, las arquitecturas propuestas (*Salar-UNet Base* y *Salar-UNet Large SOTA*), los pipelines de procesamiento geoespacial raster, el software interactivo de curaduría de datos (*Human-in-the-Loop*) y los tableros estadísticos consolidados a lo largo de más de **5,000 épocas acumuladas** sobre **3,255 parches satelitales** de la cuenca evaporítica andina (2016–2026).
 
@@ -175,7 +175,7 @@ En atención a las observaciones del jurado evaluador respecto a la calidad del 
 
 ---
 
-## 📐 Jerarquía de Datos Satelitales Sentinel-2 (Estructura SAFE)
+##  Jerarquía de Datos Satelitales Sentinel-2 (Estructura SAFE)
 
 Para gestionar eficientemente las baldosas militares de Copernicus (10,980 × 10,980 píxeles por banda, más de 2.8 GB por escena descompresa), se implementó un pipeline de fragmentación espacial programática mediante ventanas deslizantes (*Tiling*):
 
@@ -183,7 +183,7 @@ Para gestionar eficientemente las baldosas militares de Copernicus (10,980 × 10
 
 ---
 
-## 🧠 Arquitecturas de Red Neuronal Desarrolladas
+##  Arquitecturas de Red Neuronal Desarrolladas
 
 ### 1. Salar-UNet (Arquitectura Propuesta SOTA)
 Combina el paradigma encoder-decoder con compuertas de atención aditivas (*Attention Gates*), autoatención multi-cabeza en el cuello de botella y supervisión de gradientes mediante convolución Sobel fija:
@@ -197,7 +197,7 @@ Las 5 familias de modelos evaluadas en el clúster Phantom:
 
 ---
 
-## 🖼️ Inferencia Satelital y Evaluación Visual
+##  Inferencia Satelital y Evaluación Visual
 
 ### Panel de Predicciones por Modelo (Salar de Surire, Putre, Chile)
 Evaluación individualizada bajo el formato estándar de publicación: `[RGB Real] | [Máscara Manual GT] | [Predicción del Modelo]`:
@@ -218,7 +218,7 @@ Evaluación individualizada bajo el formato estándar de publicación: `[RGB Rea
 
 ---
 
-## 🚀 Guía de Instalación y Reproducción
+##  Guía de Instalación y Reproducción
 
 ### 1. Clonar el Repositorio e Instalar Dependencias
 ```bash
@@ -255,20 +255,7 @@ python 02_pipeline_datos_y_filtrador/Filtrar_GUI.py
 
 ---
 
-## 📜 Cita Académica
 
-Si utiliza el código, las arquitecturas o los datos de este proyecto en su investigación, por favor cite el trabajo de tesis:
-
-```bibtex
-@mastersthesis{medina2026salares,
-  author       = {Mathias Aldair Medina Vivanco},
-  title        = {Automatización de la delimitación y segmentación semántica multitemporal de salares andinos mediante imágenes Sentinel-2 L2A y Deep Learning},
-  school       = {Pontificia Universidad Católica del Perú (PUCP)},
-  year         = {2026},
-  address      = {Lima, Perú},
-  note         = {Asesor: Mag. Ferdinand Edgardo Pineda Ancco. Proyecto de Fin de Carrera en Ingeniería Informática}
-}
-```
 
 ---
 *Pontificia Universidad Católica del Perú — Departamento de Ingeniería — Sección Informática*
