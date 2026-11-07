@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evolución Histórica de Estiaje (83 Tomas · 2016-2026) · San Juan de Salinas · Tesis PUCP</title>
+  <meta name="description" content="Tablero unificado de análisis multitemporal de 83 tomas de Sentinel-2 L2A (julio y agosto) evaluando la contracción de la cubeta salina en San Juan de Salinas.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card: #131924;
+      --card-alt: #1a2332;
+      --card-hover: #222e42;
+      --line: #263346;
+      --tx: #e6edf3;
+      --mu: #8b949e;
+      --ac: #38bdf8;
+      --ok: #3fb950;
+      --wa: #d29922;
+      --er: #f85149;
+      --gold: #e3b341;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--tx);
+      line-height: 1.5;
+    }
+    header {
+      padding: 26px 4vw 20px;
+      background: linear-gradient(135deg, #090d14 0%, #111a28 50%, #0c2025 100%);
+      border-bottom: 1px solid var(--line);
+    }
+    .badge-top {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      font-size: .8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 10px;
+    }
+    .badge-top span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+    h1 { margin: 0 0 6px; font-size: 2.1rem; color: #fff; font-weight: 900; letter-spacing: -0.02em; }
+    .subtitle { color: var(--mu); font-size: .95rem; margin: 0; max-width: 1100px; }
+    .meta-bar {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: .84rem;
+      color: #94a3b8;
+    }
+    .meta-bar span b { color: var(--tx); }
+
+    /* Layout principal */
+    main { padding: 22px 4vw 60px; max-width: 1600px; margin: 0 auto; }
+
+    /* Barra de controles maestros */
+    .controls-panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1.6fr 1fr 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+    @media (max-width: 1024px) {
+      .controls-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+    .lbl {
+      display: block;
+      font-size: .78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+    .sel {
+      width: 100%;
+      background: #0d131d;
+      border: 1px solid var(--line);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      outline: none;
+      transition: all .2s;
+    }
+    .sel:focus {
+      border-color: var(--ac);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Tarjetas KPI */
+    .grid-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 900px) {
+      .grid-kpis { grid-template-columns: 1fr 1fr; }
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--line);
+    }
+    .kpi.red::before { background: var(--er); }
+    .kpi.blue::before { background: var(--ac); }
+    .kpi.gold::before { background: var(--gold); }
+    .kpi.green::before { background: var(--ok); }
+
+    .kpi-title { font-size: .76rem; text-transform: uppercase; font-weight: 800; letter-spacing: .04em; color: var(--mu); display: block; margin-bottom: 4px; }
+    .kpi-val { font-size: 1.85rem; font-weight: 900; display: block; line-height: 1.2; }
+    .kpi-sub { font-size: .78rem; color: #7d8590; margin-top: 4px; display: block; }
+
+    /* Contenedor Gráfico */
+    .card-chart {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 22px 16px;
+      margin-bottom: 22px;
+    }
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .chart-head h3 { margin: 0; font-size: 1.15rem; color: #fff; font-weight: 800; }
+    .chart-box {
+      position: relative;
+      height: 340px;
+      width: 100%;
+    }
+
+    /* Sección Timeline & Slider */
+    .timeline-card {
+      background: linear-gradient(180deg, #161f2e 0%, #111722 100%);
+      border: 1px solid #2d3b50;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .active-date-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .date-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+    .date-text h2 { margin: 0; font-size: 1.35rem; color: #fff; font-weight: 800; }
+    .date-text span { color: #94a3b8; font-size: .84rem; }
+
+    .playback-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-ctrl {
+      background: #1c2637;
+      border: 1px solid #2d3b50;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: .88rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+    .btn-ctrl:hover { background: #263449; border-color: #38bdf8; }
+    .btn-play {
+      background: #238636;
+      border-color: #2ea043;
+      padding: 8px 18px;
+    }
+    .btn-play:hover { background: #2ea043; }
+    .btn-play.playing {
+      background: #d29922;
+      border-color: #e3b341;
+    }
+
+    /* Slider Estilizado */
+    .slider-container {
+      margin: 16px 0 10px;
+      position: relative;
+    }
+    .timeline-slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 10px;
+      border-radius: 5px;
+      background: #1e293b;
+      outline: none;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .timeline-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 3px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.8);
+      transition: transform .15s;
+    }
+    .timeline-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    .timeline-slider::-moz-range-thumb {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 3px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.8);
+    }
+
+    /* Saltos rápidos de año */
+    .year-jumps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      justify-content: space-between;
+    }
+    .btn-yr {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #94a3b8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-yr:hover, .btn-yr.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    /* Visor de 3 Paneles Side-by-Side */
+    .visor-3paneles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 960px) {
+      .visor-3paneles { grid-template-columns: 1fr; }
+    }
+    .panel-box {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .panel-head {
+      padding: 12px 16px;
+      background: #111722;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-title {
+      font-size: .88rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-tag {
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.08);
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+    .panel-img-wrap {
+      background: #000;
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .panel-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: auto;
+      display: block;
+    }
+    .panel-foot {
+      padding: 10px 14px;
+      background: #0d131d;
+      border-top: 1px solid var(--line);
+      font-size: .78rem;
+      color: #8b949e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Barra de métricas de la toma activa */
+    .active-metrics-bar {
+      background: linear-gradient(90deg, #131d2e 0%, #152233 100%);
+      border: 1px solid #28374d;
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .metric-item {
+      text-align: center;
+    }
+    .metric-item span {
+      font-size: .74rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .metric-item b {
+      font-size: 1.25rem;
+      color: #fff;
+      font-weight: 900;
+    }
+
+    /* Tabla histórica colapsable */
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 30px;
+    }
+    .table-head-bar {
+      padding: 16px 22px;
+      background: #111722;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .table-wrap {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+      text-align: left;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #151d2a;
+      padding: 10px 14px;
+      color: #94a3b8;
+      font-weight: 700;
+      border-bottom: 1px solid var(--line);
+      z-index: 10;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--tx);
+    }
+    tr:hover td {
+      background: rgba(56, 189, 248, 0.08);
+      cursor: pointer;
+    }
+    tr.active-row td {
+      background: rgba(56, 189, 248, 0.18);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* Botones y utilidades */
+    .btn-csv {
+      background: rgba(63, 185, 80, 0.15);
+      border: 1px solid rgba(63, 185, 80, 0.4);
+      color: #3fb950;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: .84rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+    .btn-csv:hover { background: rgba(63, 185, 80, 0.28); }
+
+    .info-box {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 4px solid var(--ac);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 22px;
+      font-size: .88rem;
+      color: #cbd5e1;
+    }
+    .info-box b { color: #38bdf8; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge-top">
+    <span class="dot"></span> 83 Tomas Multitemporales · Julio y Agosto (2016 – 2026) · Sentinel-2 L2A
+  </div>
+  <h1>San Juan de Salinas: Dinámica de Estiaje y Reducción del Salar</h1>
+  <p class="subtitle">
+    Monitoreo cónsono en la ventana fenológica de extracción de sal (julio y agosto). Demostración cuantitativa de la contracción secular de la costra salina comparando el <b>Ground Truth biofísico ($SI > 0.0771$)</b> con las propuestas de Deep Learning de tesis.
+  </p>
+  <div class="meta-bar">
+    <span><b>Tesista:</b> Mathias Aldair Medina Vivanco (PUCP)</span>
+    <span><b>Asesor:</b> Mag. Ferdinand Edgardo Pineda Ancco</span>
+    <span><b>Sensor:</b> Sentinel-2A / 2B / 2C (10m / 20m)</span>
+    <span><b>Coordenadas Fijas:</b> X=3820, Y=2660 (Parche 256×256 px)</span>
+    <span><b>Total Tomas:</b> 83 Escenas Filtradas</span>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+    <span style="background:rgba(63,185,80,0.15); border:1px solid #3fb950; color:#3fb950; padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">🎓 Indicador Objetivamente Verificable (IOV) · Tesis PUCP</span>
+    <a href="https://github.com/itzmagito/DatosModeloSalar" target="_blank" rel="noopener noreferrer" style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.86rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📂 Repositorio Oficial en GitHub (Código y Modelos) ↗</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- CONTROLES MAESTROS UNIFICADOS -->
+  <div class="controls-panel">
+    <div class="controls-grid">
+      <div>
+        <label class="lbl">1. Modelo de IA a Evaluar:</label>
+        <select id="selModelo" class="sel" onchange="actualizarTodo()">
+          <option value="v3_4b_large" selected>🏆 Salar-UNet V3 · 4B · Large (Propuesta Definitiva)</option>
+          <option value="v2_4b_base">Salar-UNet V2 · 4B · Base (PROP-1)</option>
+          <option value="v2_6b_large">Salar-UNet V2 · 6B · Large (PROP-2)</option>
+          <option value="unet_4b">U-Net Clásica Convolucional · 4B</option>
+          <option value="gt">Ground Truth Biofísico (SI > 0.0771)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="lbl">2. Región de Análisis (ROI):</label>
+        <select id="selEscenario" class="sel" onchange="actualizarTodo()">
+          <option value="v2" selected>✨ Variante 2: Sin Isla Terrosa (767.72 ha) [Validada por Experto]</option>
+          <option value="v1">Variante 1: Salar Todo Completo (789.92 ha)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="lbl">3. Unidad de Medida:</label>
+        <select id="selUnidad" class="sel" onchange="actualizarTodo()">
+          <option value="ha" selected>Hectáreas (ha)</option>
+          <option value="km2">Kilómetros² (km²)</option>
+          <option value="pct">Porcentaje de Cubeta (%)</option>
+          <option value="px">Píxeles en Cubeta</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="lbl">4. Visualización de Máscara:</label>
+        <select id="selEstilo" class="sel" onchange="actualizarVisor()">
+          <option value="overlay" selected>Superposición Satelital (Cyan / Ámbar)</option>
+          <option value="bn">Blanco y Negro Puro (Binario Tesis)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- TARJETAS KPIS DINÁMICAS -->
+  <div class="grid-kpis">
+    <div class="kpi red">
+      <span class="kpi-title">Tendencia Secular (Pendiente)</span>
+      <b class="kpi-val" id="kpiSlope" style="color:var(--er)">-8.23 ha/año</b>
+      <span class="kpi-sub" id="kpiSlopeSub">Regresión lineal sobre las 83 tomas</span>
+    </div>
+    <div class="kpi red">
+      <span class="kpi-title">Pérdida Estimada (10 Años)</span>
+      <b class="kpi-val" id="kpiDelta10" style="color:var(--er)">-82.3 ha</b>
+      <span class="kpi-sub" id="kpiDeltaSub">Contracción neta acumulada</span>
+    </div>
+    <div class="kpi blue">
+      <span class="kpi-title">Área en la Fecha Activa</span>
+      <b class="kpi-val" id="kpiActiva" style="color:var(--ac)">--- ha</b>
+      <span class="kpi-sub" id="kpiActivaSub">Toma seleccionada en el slider</span>
+    </div>
+    <div class="kpi green">
+      <span class="kpi-title">Veredicto Multitemporal</span>
+      <b class="kpi-val" id="kpiVeredicto" style="color:var(--er); font-size:1.45rem;">🔴 REDUCCIÓN CONFIRMADA</b>
+      <span class="kpi-sub">Validado en todas las arquitecturas</span>
+    </div>
+  </div>
+
+  <!-- GRÁFICO INTERACTIVO DE LAS 83 TOMAS -->
+  <div class="card-chart">
+    <div class="chart-head">
+      <div>
+        <h3 id="txtGraficaTitulo">Evolución Multitemporal del Área Salina (83 Tomas · 2016 a 2026)</h3>
+        <span style="font-size:.82rem;color:var(--mu)">Haz clic sobre cualquier punto del gráfico para mover el slider y el visor directamente a esa fecha.</span>
+      </div>
+      <div style="font-size:.82rem;color:var(--mu);display:flex;align-items:center;gap:14px">
+        <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#38bdf8;display:inline-block"></span> Modelo Elegido</span>
+        <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#d29922;display:inline-block"></span> Ground Truth</span>
+        <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:2px;background:#f85149;border-top:1px dashed #f85149;display:inline-block"></span> Tendencia Secular</span>
+      </div>
+    </div>
+    <div class="chart-box">
+      <canvas id="chEstiaje"></canvas>
+    </div>
+  </div>
+
+  <!-- BARRA DESLIZANTE TEMPORAL & TIMELAPSE -->
+  <div class="timeline-card">
+    <div class="timeline-header">
+      <div class="active-date-badge">
+        <div class="date-circle">📅</div>
+        <div class="date-text">
+          <h2 id="txtFechaPrincipal">Fecha: 16 de Julio de 2016</h2>
+          <span id="txtSubFecha">Toma 1 de 83 · Sentinel-2A · Época de Estiaje</span>
+        </div>
+      </div>
+
+      <div class="playback-controls">
+        <button id="btnPlay" class="btn-ctrl btn-play" onclick="togglePlay()">▶ Reproducir Timelapse</button>
+        <button class="btn-ctrl" onclick="cambiarPaso(-1)">◀ Anterior</button>
+        <button class="btn-ctrl" onclick="cambiarPaso(1)">Siguiente ▶</button>
+        <select id="selSpeed" class="sel" style="width:auto;padding:7px 10px;font-size:.82rem" onchange="cambiarVelocidad()">
+          <option value="1200">0.5x (Lento)</option>
+          <option value="600" selected>1.0x (Normal)</option>
+          <option value="300">2.0x (Rápido)</option>
+          <option value="150">4.0x (Ultra)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Slider continuo -->
+    <div class="slider-container">
+      <input type="range" id="timeSlider" class="timeline-slider" min="0" max="82" value="0" oninput="irAlIndice(parseInt(this.value))">
+    </div>
+
+    <!-- Saltos rápidos por año -->
+    <div class="year-jumps" id="yearJumpsCont">
+      <!-- Inyectado por JS -->
+    </div>
+  </div>
+
+  <!-- VISOR SINCRONIZADO EN PARALELO DE 3 PANELES -->
+  <div class="visor-3paneles">
+    <!-- Panel 1: RGB Satelital Real -->
+    <div class="panel-box">
+      <div class="panel-head">
+        <span class="panel-title">🛰️ Color Natural Real</span>
+        <span class="panel-tag">Sentinel-2 L2A</span>
+      </div>
+      <div class="panel-img-wrap">
+        <img id="imgVisorReal" src="" alt="RGB Satelital Real">
+      </div>
+      <div class="panel-foot">
+        <span>Bandas B04, B03, B02 (TCI Real)</span>
+        <span>20m / píxel</span>
+      </div>
+    </div>
+
+    <!-- Panel 2: Ground Truth Biofísico -->
+    <div class="panel-box">
+      <div class="panel-head">
+        <span class="panel-title">📏 Ground Truth Biofísico</span>
+        <span class="panel-tag" id="tagEstiloGT">Superposición Ámbar</span>
+      </div>
+      <div class="panel-img-wrap">
+        <img id="imgVisorGT" src="" alt="Ground Truth Biofísico">
+      </div>
+      <div class="panel-foot">
+        <span>Índice SI = (B11 - B12) / (B11 + B12) &gt; 0.0771</span>
+        <span id="txtAreaGTFoot">0.0 ha</span>
+      </div>
+    </div>
+
+    <!-- Panel 3: Predicción Modelo IA -->
+    <div class="panel-box">
+      <div class="panel-head">
+        <span class="panel-title" id="txtTituloPanelModelo">🤖 Predicción IA</span>
+        <span class="panel-tag" id="tagEstiloModelo">Superposición Cyan</span>
+      </div>
+      <div class="panel-img-wrap">
+        <img id="imgVisorPred" src="" alt="Predicción Modelo">
+      </div>
+      <div class="panel-foot">
+        <span id="txtModeloNombreFoot">Salar-UNet V3 · 4B · Large</span>
+        <span id="txtAreaModeloFoot" style="color:var(--ac);font-weight:700">0.0 ha</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA DE MÉTRICAS COMPARATIVAS DE LA TOMA ACTIVA -->
+  <div class="active-metrics-bar">
+    <div class="metric-item">
+      <span>Área Predicha (Modelo)</span>
+      <b id="mbAreaModelo" style="color:#38bdf8">--- ha</b>
+    </div>
+    <div class="metric-item">
+      <span>Área Biofísica (Ground Truth)</span>
+      <b id="mbAreaGT" style="color:#e3b341">--- ha</b>
+    </div>
+    <div class="metric-item">
+      <span>Diferencia vs GT</span>
+      <b id="mbDif">--- ha</b>
+    </div>
+    <div class="metric-item">
+      <span>Concordancia / Cobertura</span>
+      <b id="mbPct" style="color:#3fb950">--- %</b>
+    </div>
+    <div class="metric-item">
+      <span>Conteo de Píxeles</span>
+      <b id="mbPixeles" style="font-size:1.05rem">--- px salar / --- px fondo</b>
+    </div>
+  </div>
+
+  <!-- INFO BOX CONTEXTUAL -->
+  <div class="info-box">
+    <b>💡 Validación por Experto Salinero Local:</b> En las entrevistas de campo en San Juan de Salinas (Puno), los productores artesanales confirmaron que la pequeña porción terrosa central (555 px · 22.20 ha) corresponde a un montículo sedimentario no salino y a caminos de tierra agregados artificialmente para transitar carretillas. Por tanto, la <b>Variante 2 (Sin Isla Terrosa)</b> representa la superficie real de explotación y la costra salina activa. Ambos escenarios demuestran una contracción neta de la cubeta en los 10 años.
+  </div>
+
+  <!-- TABLA HISTÓRICA COMPLETA DE LAS 83 TOMAS -->
+  <div class="table-card">
+    <div class="table-head-bar">
+      <div>
+        <h3 style="margin:0;font-size:1.1rem;color:#fff;font-weight:800">Registro Completo de las 83 Tomas de Estiaje (2016 – 2026)</h3>
+        <span style="font-size:.82rem;color:var(--mu)">Haz clic en cualquier fila para inspeccionar visualmente esa fecha en los 3 paneles superiores.</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" id="filtroTabla" placeholder="🔍 Filtrar por fecha o año..." onkeyup="filtrarTabla()" style="background:#0d131d;border:1px solid var(--line);color:#fff;padding:6px 12px;border-radius:6px;font-size:.82rem">
+        <button class="btn-csv" onclick="descargarCSV()">📥 Descargar CSV (83 Tomas)</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="tblTomas">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Fecha</th>
+            <th>Año</th>
+            <th>Satélite</th>
+            <th>Píxeles Salar</th>
+            <th>Píxeles Fondo</th>
+            <th>Área Modelo</th>
+            <th>Área GT</th>
+            <th>Diferencia</th>
+            <th>Cobertura Cubeta</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyTabla">
+          <!-- Inyectado por JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const DATA = [{"nombre": "S2A_MSIL2A_20160716T144732_N0500_R139_T19LCD_20231027T002051.SAFE", "fecha": "20160716", "fecha_fmt": "2016-07-16", "year": 2016, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2417, "negros": 17331, "ha": 96.68, "km2": 0.967, "pct": 12.24}, "v2": {"blancos": 1989, "negros": 17204, "ha": 79.56, "km2": 0.796, "pct": 10.36}}, "v2_4b_base": {"v1": {"blancos": 2641, "negros": 17107, "ha": 105.64, "km2": 1.056, "pct": 13.37}, "v2": {"blancos": 2159, "negros": 17034, "ha": 86.36, "km2": 0.864, "pct": 11.25}}, "v3_4b_large": {"v1": {"blancos": 2480, "negros": 17268, "ha": 99.2, "km2": 0.992, "pct": 12.56}, "v2": {"blancos": 2009, "negros": 17184, "ha": 80.36, "km2": 0.804, "pct": 10.47}}, "v2_6b_large": {"v1": {"blancos": 2415, "negros": 17333, "ha": 96.6, "km2": 0.966, "pct": 12.23}, "v2": {"blancos": 1988, "negros": 17205, "ha": 79.52, "km2": 0.795, "pct": 10.36}}, "unet_4b": {"v1": {"blancos": 2694, "negros": 17054, "ha": 107.76, "km2": 1.078, "pct": 13.64}, "v2": {"blancos": 2236, "negros": 16957, "ha": 89.44, "km2": 0.894, "pct": 11.65}}}}, {"nombre": "S2A_MSIL2A_20160805T144732_N0500_R139_T19LCD_20231001T002127.SAFE", "fecha": "20160805", "fecha_fmt": "2016-08-05", "year": 2016, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2463, "negros": 17285, "ha": 98.52, "km2": 0.985, "pct": 12.47}, "v2": {"blancos": 2036, "negros": 17157, "ha": 81.44, "km2": 0.814, "pct": 10.61}}, "v2_4b_base": {"v1": {"blancos": 3566, "negros": 16182, "ha": 142.64, "km2": 1.426, "pct": 18.06}, "v2": {"blancos": 3054, "negros": 16139, "ha": 122.16, "km2": 1.222, "pct": 15.91}}, "v3_4b_large": {"v1": {"blancos": 3158, "negros": 16590, "ha": 126.32, "km2": 1.263, "pct": 15.99}, "v2": {"blancos": 2675, "negros": 16518, "ha": 107.0, "km2": 1.07, "pct": 13.94}}, "v2_6b_large": {"v1": {"blancos": 2471, "negros": 17277, "ha": 98.84, "km2": 0.988, "pct": 12.51}, "v2": {"blancos": 2042, "negros": 17151, "ha": 81.68, "km2": 0.817, "pct": 10.64}}, "unet_4b": {"v1": {"blancos": 3133, "negros": 16615, "ha": 125.32, "km2": 1.253, "pct": 15.86}, "v2": {"blancos": 2666, "negros": 16527, "ha": 106.64, "km2": 1.066, "pct": 13.89}}}}, {"nombre": "S2A_MSIL2A_20160825T144732_N0500_R139_T19LCD_20231008T062450.SAFE", "fecha": "20160825", "fecha_fmt": "2016-08-25", "year": 2016, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 3575, "negros": 16173, "ha": 143.0, "km2": 1.43, "pct": 18.1}, "v2": {"blancos": 3108, "negros": 16085, "ha": 124.32, "km2": 1.243, "pct": 16.19}}, "v2_4b_base": {"v1": {"blancos": 3668, "negros": 16080, "ha": 146.72, "km2": 1.467, "pct": 18.57}, "v2": {"blancos": 3193, "negros": 16000, "ha": 127.72, "km2": 1.277, "pct": 16.64}}, "v3_4b_large": {"v1": {"blancos": 3433, "negros": 16315, "ha": 137.32, "km2": 1.373, "pct": 17.38}, "v2": {"blancos": 2939, "negros": 16254, "ha": 117.56, "km2": 1.176, "pct": 15.31}}, "v2_6b_large": {"v1": {"blancos": 3576, "negros": 16172, "ha": 143.04, "km2": 1.43, "pct": 18.11}, "v2": {"blancos": 3108, "negros": 16085, "ha": 124.32, "km2": 1.243, "pct": 16.19}}, "unet_4b": {"v1": {"blancos": 3360, "negros": 16388, "ha": 134.4, "km2": 1.344, "pct": 17.01}, "v2": {"blancos": 2910, "negros": 16283, "ha": 116.4, "km2": 1.164, "pct": 15.16}}}}, {"nombre": "S2A_MSIL2A_20170711T144731_N0500_R139_T19LCD_20231005T172423.SAFE", "fecha": "20170711", "fecha_fmt": "2017-07-11", "year": 2017, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 8103, "negros": 11645, "ha": 324.12, "km2": 3.241, "pct": 41.03}, "v2": {"blancos": 7724, "negros": 11469, "ha": 308.96, "km2": 3.09, "pct": 40.24}}, "v2_4b_base": {"v1": {"blancos": 9192, "negros": 10556, "ha": 367.68, "km2": 3.677, "pct": 46.55}, "v2": {"blancos": 8668, "negros": 10525, "ha": 346.72, "km2": 3.467, "pct": 45.16}}, "v3_4b_large": {"v1": {"blancos": 13557, "negros": 6191, "ha": 542.28, "km2": 5.423, "pct": 68.65}, "v2": {"blancos": 13047, "negros": 6146, "ha": 521.88, "km2": 5.219, "pct": 67.98}}, "v2_6b_large": {"v1": {"blancos": 8147, "negros": 11601, "ha": 325.88, "km2": 3.259, "pct": 41.25}, "v2": {"blancos": 7772, "negros": 11421, "ha": 310.88, "km2": 3.109, "pct": 40.49}}, "unet_4b": {"v1": {"blancos": 7569, "negros": 12179, "ha": 302.76, "km2": 3.028, "pct": 38.33}, "v2": {"blancos": 7168, "negros": 12025, "ha": 286.72, "km2": 2.867, "pct": 37.35}}}}, {"nombre": "S2B_MSIL2A_20170716T144729_N0500_R139_T19LCD_20231007T022047.SAFE", "fecha": "20170716", "fecha_fmt": "2017-07-16", "year": 2017, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 6637, "negros": 13111, "ha": 265.48, "km2": 2.655, "pct": 33.61}, "v2": {"blancos": 6438, "negros": 12755, "ha": 257.52, "km2": 2.575, "pct": 33.54}}, "v2_4b_base": {"v1": {"blancos": 9190, "negros": 10558, "ha": 367.6, "km2": 3.676, "pct": 46.54}, "v2": {"blancos": 8682, "negros": 10511, "ha": 347.28, "km2": 3.473, "pct": 45.24}}, "v3_4b_large": {"v1": {"blancos": 12297, "negros": 7451, "ha": 491.88, "km2": 4.919, "pct": 62.27}, "v2": {"blancos": 11811, "negros": 7382, "ha": 472.44, "km2": 4.724, "pct": 61.54}}, "v2_6b_large": {"v1": {"blancos": 6666, "negros": 13082, "ha": 266.64, "km2": 2.666, "pct": 33.76}, "v2": {"blancos": 6461, "negros": 12732, "ha": 258.44, "km2": 2.584, "pct": 33.66}}, "unet_4b": {"v1": {"blancos": 6624, "negros": 13124, "ha": 264.96, "km2": 2.65, "pct": 33.54}, "v2": {"blancos": 6273, "negros": 12920, "ha": 250.92, "km2": 2.509, "pct": 32.68}}}}, {"nombre": "S2A_MSIL2A_20170731T144731_N0500_R139_T19LCD_20231007T155710.SAFE", "fecha": "20170731", "fecha_fmt": "2017-07-31", "year": 2017, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 8714, "negros": 11034, "ha": 348.56, "km2": 3.486, "pct": 44.13}, "v2": {"blancos": 8372, "negros": 10821, "ha": 334.88, "km2": 3.349, "pct": 43.62}}, "v2_4b_base": {"v1": {"blancos": 10170, "negros": 9578, "ha": 406.8, "km2": 4.068, "pct": 51.5}, "v2": {"blancos": 9683, "negros": 9510, "ha": 387.32, "km2": 3.873, "pct": 50.45}}, "v3_4b_large": {"v1": {"blancos": 10357, "negros": 9391, "ha": 414.28, "km2": 4.143, "pct": 52.45}, "v2": {"blancos": 9920, "negros": 9273, "ha": 396.8, "km2": 3.968, "pct": 51.69}}, "v2_6b_large": {"v1": {"blancos": 8748, "negros": 11000, "ha": 349.92, "km2": 3.499, "pct": 44.3}, "v2": {"blancos": 8405, "negros": 10788, "ha": 336.2, "km2": 3.362, "pct": 43.79}}, "unet_4b": {"v1": {"blancos": 7931, "negros": 11817, "ha": 317.24, "km2": 3.172, "pct": 40.16}, "v2": {"blancos": 7612, "negros": 11581, "ha": 304.48, "km2": 3.045, "pct": 39.66}}}}, {"nombre": "S2B_MSIL2A_20170805T144729_N0500_R139_T19LCD_20230930T160611.SAFE", "fecha": "20170805", "fecha_fmt": "2017-08-05", "year": 2017, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 7184, "negros": 12564, "ha": 287.36, "km2": 2.874, "pct": 36.38}, "v2": {"blancos": 7036, "negros": 12157, "ha": 281.44, "km2": 2.814, "pct": 36.66}}, "v2_4b_base": {"v1": {"blancos": 10000, "negros": 9748, "ha": 400.0, "km2": 4.0, "pct": 50.64}, "v2": {"blancos": 9545, "negros": 9648, "ha": 381.8, "km2": 3.818, "pct": 49.73}}, "v3_4b_large": {"v1": {"blancos": 11100, "negros": 8648, "ha": 444.0, "km2": 4.44, "pct": 56.21}, "v2": {"blancos": 10670, "negros": 8523, "ha": 426.8, "km2": 4.268, "pct": 55.59}}, "v2_6b_large": {"v1": {"blancos": 7257, "negros": 12491, "ha": 290.28, "km2": 2.903, "pct": 36.75}, "v2": {"blancos": 7106, "negros": 12087, "ha": 284.24, "km2": 2.842, "pct": 37.02}}, "unet_4b": {"v1": {"blancos": 6942, "negros": 12806, "ha": 277.68, "km2": 2.777, "pct": 35.15}, "v2": {"blancos": 6664, "negros": 12529, "ha": 266.56, "km2": 2.666, "pct": 34.72}}}}, {"nombre": "S2A_MSIL2A_20170820T144731_N0500_R139_T19LCD_20230828T003745.SAFE", "fecha": "20170820", "fecha_fmt": "2017-08-20", "year": 2017, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 13324, "negros": 6424, "ha": 532.96, "km2": 5.33, "pct": 67.47}, "v2": {"blancos": 13017, "negros": 6176, "ha": 520.68, "km2": 5.207, "pct": 67.82}}, "v2_4b_base": {"v1": {"blancos": 12953, "negros": 6795, "ha": 518.12, "km2": 5.181, "pct": 65.59}, "v2": {"blancos": 12521, "negros": 6672, "ha": 500.84, "km2": 5.008, "pct": 65.24}}, "v3_4b_large": {"v1": {"blancos": 15668, "negros": 4080, "ha": 626.72, "km2": 6.267, "pct": 79.34}, "v2": {"blancos": 15226, "negros": 3967, "ha": 609.04, "km2": 6.09, "pct": 79.33}}, "v2_6b_large": {"v1": {"blancos": 13345, "negros": 6403, "ha": 533.8, "km2": 5.338, "pct": 67.58}, "v2": {"blancos": 13038, "negros": 6155, "ha": 521.52, "km2": 5.215, "pct": 67.93}}, "unet_4b": {"v1": {"blancos": 9154, "negros": 10594, "ha": 366.16, "km2": 3.662, "pct": 46.35}, "v2": {"blancos": 8893, "negros": 10300, "ha": 355.72, "km2": 3.557, "pct": 46.33}}}}, {"nombre": "S2B_MSIL2A_20170825T144729_N0510_R139_T19LCD_20250602T044934.SAFE", "fecha": "20170825", "fecha_fmt": "2017-08-25", "year": 2017, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 7629, "negros": 12119, "ha": 305.16, "km2": 3.052, "pct": 38.63}, "v2": {"blancos": 7486, "negros": 11707, "ha": 299.44, "km2": 2.994, "pct": 39.0}}, "v2_4b_base": {"v1": {"blancos": 7895, "negros": 11853, "ha": 315.8, "km2": 3.158, "pct": 39.98}, "v2": {"blancos": 7510, "negros": 11683, "ha": 300.4, "km2": 3.004, "pct": 39.13}}, "v3_4b_large": {"v1": {"blancos": 7777, "negros": 11971, "ha": 311.08, "km2": 3.111, "pct": 39.38}, "v2": {"blancos": 7361, "negros": 11832, "ha": 294.44, "km2": 2.944, "pct": 38.35}}, "v2_6b_large": {"v1": {"blancos": 7727, "negros": 12021, "ha": 309.08, "km2": 3.091, "pct": 39.13}, "v2": {"blancos": 7579, "negros": 11614, "ha": 303.16, "km2": 3.032, "pct": 39.49}}, "unet_4b": {"v1": {"blancos": 7613, "negros": 12135, "ha": 304.52, "km2": 3.045, "pct": 38.55}, "v2": {"blancos": 7332, "negros": 11861, "ha": 293.28, "km2": 2.933, "pct": 38.2}}}}, {"nombre": "S2A_MSIL2A_20180706T144731_N0500_R139_T19LCD_20230809T173652.SAFE", "fecha": "20180706", "fecha_fmt": "2018-07-06", "year": 2018, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 5367, "negros": 14381, "ha": 214.68, "km2": 2.147, "pct": 27.18}, "v2": {"blancos": 4915, "negros": 14278, "ha": 196.6, "km2": 1.966, "pct": 25.61}}, "v2_4b_base": {"v1": {"blancos": 8353, "negros": 11395, "ha": 334.12, "km2": 3.341, "pct": 42.3}, "v2": {"blancos": 7799, "negros": 11394, "ha": 311.96, "km2": 3.12, "pct": 40.63}}, "v3_4b_large": {"v1": {"blancos": 5999, "negros": 13749, "ha": 239.96, "km2": 2.4, "pct": 30.38}, "v2": {"blancos": 5456, "negros": 13737, "ha": 218.24, "km2": 2.182, "pct": 28.43}}, "v2_6b_large": {"v1": {"blancos": 5372, "negros": 14376, "ha": 214.88, "km2": 2.149, "pct": 27.2}, "v2": {"blancos": 4917, "negros": 14276, "ha": 196.68, "km2": 1.967, "pct": 25.62}}, "unet_4b": {"v1": {"blancos": 4676, "negros": 15072, "ha": 187.04, "km2": 1.87, "pct": 23.68}, "v2": {"blancos": 4214, "negros": 14979, "ha": 168.56, "km2": 1.686, "pct": 21.96}}}}, {"nombre": "S2A_MSIL2A_20180726T144731_N0500_R139_T19LCD_20230808T000701.SAFE", "fecha": "20180726", "fecha_fmt": "2018-07-26", "year": 2018, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 5952, "negros": 13796, "ha": 238.08, "km2": 2.381, "pct": 30.14}, "v2": {"blancos": 5463, "negros": 13730, "ha": 218.52, "km2": 2.185, "pct": 28.46}}, "v2_4b_base": {"v1": {"blancos": 7088, "negros": 12660, "ha": 283.52, "km2": 2.835, "pct": 35.89}, "v2": {"blancos": 6535, "negros": 12658, "ha": 261.4, "km2": 2.614, "pct": 34.05}}, "v3_4b_large": {"v1": {"blancos": 5361, "negros": 14387, "ha": 214.44, "km2": 2.144, "pct": 27.15}, "v2": {"blancos": 4810, "negros": 14383, "ha": 192.4, "km2": 1.924, "pct": 25.06}}, "v2_6b_large": {"v1": {"blancos": 5985, "negros": 13763, "ha": 239.4, "km2": 2.394, "pct": 30.31}, "v2": {"blancos": 5494, "negros": 13699, "ha": 219.76, "km2": 2.198, "pct": 28.63}}, "unet_4b": {"v1": {"blancos": 7880, "negros": 11868, "ha": 315.2, "km2": 3.152, "pct": 39.9}, "v2": {"blancos": 7325, "negros": 11868, "ha": 293.0, "km2": 2.93, "pct": 38.16}}}}, {"nombre": "S2A_MSIL2A_20180805T144731_N0500_R139_T19LCD_20230731T144120.SAFE", "fecha": "20180805", "fecha_fmt": "2018-08-05", "year": 2018, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 4474, "negros": 15274, "ha": 178.96, "km2": 1.79, "pct": 22.66}, "v2": {"blancos": 4032, "negros": 15161, "ha": 161.28, "km2": 1.613, "pct": 21.01}}, "v2_4b_base": {"v1": {"blancos": 6421, "negros": 13327, "ha": 256.84, "km2": 2.568, "pct": 32.51}, "v2": {"blancos": 5875, "negros": 13318, "ha": 235.0, "km2": 2.35, "pct": 30.61}}, "v3_4b_large": {"v1": {"blancos": 3317, "negros": 16431, "ha": 132.68, "km2": 1.327, "pct": 16.8}, "v2": {"blancos": 2773, "negros": 16420, "ha": 110.92, "km2": 1.109, "pct": 14.45}}, "v2_6b_large": {"v1": {"blancos": 4462, "negros": 15286, "ha": 178.48, "km2": 1.785, "pct": 22.59}, "v2": {"blancos": 4025, "negros": 15168, "ha": 161.0, "km2": 1.61, "pct": 20.97}}, "unet_4b": {"v1": {"blancos": 6514, "negros": 13234, "ha": 260.56, "km2": 2.606, "pct": 32.99}, "v2": {"blancos": 5968, "negros": 13225, "ha": 238.72, "km2": 2.387, "pct": 31.09}}}}, {"nombre": "S2A_MSIL2A_20180825T144731_N0500_R139_T19LCD_20230809T142756.SAFE", "fecha": "20180825", "fecha_fmt": "2018-08-25", "year": 2018, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 8881, "negros": 10867, "ha": 355.24, "km2": 3.552, "pct": 44.97}, "v2": {"blancos": 8461, "negros": 10732, "ha": 338.44, "km2": 3.384, "pct": 44.08}}, "v2_4b_base": {"v1": {"blancos": 7928, "negros": 11820, "ha": 317.12, "km2": 3.171, "pct": 40.15}, "v2": {"blancos": 7493, "negros": 11700, "ha": 299.72, "km2": 2.997, "pct": 39.04}}, "v3_4b_large": {"v1": {"blancos": 5005, "negros": 14743, "ha": 200.2, "km2": 2.002, "pct": 25.34}, "v2": {"blancos": 4504, "negros": 14689, "ha": 180.16, "km2": 1.802, "pct": 23.47}}, "v2_6b_large": {"v1": {"blancos": 9021, "negros": 10727, "ha": 360.84, "km2": 3.608, "pct": 45.68}, "v2": {"blancos": 8600, "negros": 10593, "ha": 344.0, "km2": 3.44, "pct": 44.81}}, "unet_4b": {"v1": {"blancos": 6478, "negros": 13270, "ha": 259.12, "km2": 2.591, "pct": 32.8}, "v2": {"blancos": 6017, "negros": 13176, "ha": 240.68, "km2": 2.407, "pct": 31.35}}}}, {"nombre": "S2A_MSIL2A_20190701T144741_N0500_R139_T19LCD_20230722T051835.SAFE", "fecha": "20190701", "fecha_fmt": "2019-07-01", "year": 2019, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 5801, "negros": 13947, "ha": 232.04, "km2": 2.32, "pct": 29.38}, "v2": {"blancos": 5337, "negros": 13856, "ha": 213.48, "km2": 2.135, "pct": 27.81}}, "v2_4b_base": {"v1": {"blancos": 6146, "negros": 13602, "ha": 245.84, "km2": 2.458, "pct": 31.12}, "v2": {"blancos": 5652, "negros": 13541, "ha": 226.08, "km2": 2.261, "pct": 29.45}}, "v3_4b_large": {"v1": {"blancos": 5440, "negros": 14308, "ha": 217.6, "km2": 2.176, "pct": 27.55}, "v2": {"blancos": 4967, "negros": 14226, "ha": 198.68, "km2": 1.987, "pct": 25.88}}, "v2_6b_large": {"v1": {"blancos": 5860, "negros": 13888, "ha": 234.4, "km2": 2.344, "pct": 29.67}, "v2": {"blancos": 5389, "negros": 13804, "ha": 215.56, "km2": 2.156, "pct": 28.08}}, "unet_4b": {"v1": {"blancos": 5056, "negros": 14692, "ha": 202.24, "km2": 2.022, "pct": 25.6}, "v2": {"blancos": 4573, "negros": 14620, "ha": 182.92, "km2": 1.829, "pct": 23.83}}}}, {"nombre": "S2B_MSIL2A_20190706T144739_N0500_R139_T19LCD_20230703T183935.SAFE", "fecha": "20190706", "fecha_fmt": "2019-07-06", "year": 2019, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 5319, "negros": 14429, "ha": 212.76, "km2": 2.128, "pct": 26.93}, "v2": {"blancos": 4925, "negros": 14268, "ha": 197.0, "km2": 1.97, "pct": 25.66}}, "v2_4b_base": {"v1": {"blancos": 6181, "negros": 13567, "ha": 247.24, "km2": 2.472, "pct": 31.3}, "v2": {"blancos": 5749, "negros": 13444, "ha": 229.96, "km2": 2.3, "pct": 29.95}}, "v3_4b_large": {"v1": {"blancos": 5337, "negros": 14411, "ha": 213.48, "km2": 2.135, "pct": 27.03}, "v2": {"blancos": 4920, "negros": 14273, "ha": 196.8, "km2": 1.968, "pct": 25.63}}, "v2_6b_large": {"v1": {"blancos": 5359, "negros": 14389, "ha": 214.36, "km2": 2.144, "pct": 27.14}, "v2": {"blancos": 4966, "negros": 14227, "ha": 198.64, "km2": 1.986, "pct": 25.87}}, "unet_4b": {"v1": {"blancos": 3988, "negros": 15760, "ha": 159.52, "km2": 1.595, "pct": 20.19}, "v2": {"blancos": 3600, "negros": 15593, "ha": 144.0, "km2": 1.44, "pct": 18.76}}}}, {"nombre": "S2A_MSIL2A_20190711T144741_N0500_R139_T19LCD_20230722T193715.SAFE", "fecha": "20190711", "fecha_fmt": "2019-07-11", "year": 2019, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 6600, "negros": 13148, "ha": 264.0, "km2": 2.64, "pct": 33.42}, "v2": {"blancos": 6163, "negros": 13030, "ha": 246.52, "km2": 2.465, "pct": 32.11}}, "v2_4b_base": {"v1": {"blancos": 6889, "negros": 12859, "ha": 275.56, "km2": 2.756, "pct": 34.88}, "v2": {"blancos": 6433, "negros": 12760, "ha": 257.32, "km2": 2.573, "pct": 33.52}}, "v3_4b_large": {"v1": {"blancos": 6322, "negros": 13426, "ha": 252.88, "km2": 2.529, "pct": 32.01}, "v2": {"blancos": 5876, "negros": 13317, "ha": 235.04, "km2": 2.35, "pct": 30.62}}, "v2_6b_large": {"v1": {"blancos": 6715, "negros": 13033, "ha": 268.6, "km2": 2.686, "pct": 34.0}, "v2": {"blancos": 6279, "negros": 12914, "ha": 251.16, "km2": 2.512, "pct": 32.72}}, "unet_4b": {"v1": {"blancos": 4211, "negros": 15537, "ha": 168.44, "km2": 1.684, "pct": 21.32}, "v2": {"blancos": 3827, "negros": 15366, "ha": 153.08, "km2": 1.531, "pct": 19.94}}}}, {"nombre": "S2B_MSIL2A_20190716T144739_N0500_R139_T19LCD_20230624T210520.SAFE", "fecha": "20190716", "fecha_fmt": "2019-07-16", "year": 2019, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 3969, "negros": 15779, "ha": 158.76, "km2": 1.588, "pct": 20.1}, "v2": {"blancos": 3706, "negros": 15487, "ha": 148.24, "km2": 1.482, "pct": 19.31}}, "v2_4b_base": {"v1": {"blancos": 80, "negros": 19668, "ha": 3.2, "km2": 0.032, "pct": 0.41}, "v2": {"blancos": 80, "negros": 19113, "ha": 3.2, "km2": 0.032, "pct": 0.42}}, "v3_4b_large": {"v1": {"blancos": 211, "negros": 19537, "ha": 8.44, "km2": 0.084, "pct": 1.07}, "v2": {"blancos": 175, "negros": 19018, "ha": 7.0, "km2": 0.07, "pct": 0.91}}, "v2_6b_large": {"v1": {"blancos": 4070, "negros": 15678, "ha": 162.8, "km2": 1.628, "pct": 20.61}, "v2": {"blancos": 3795, "negros": 15398, "ha": 151.8, "km2": 1.518, "pct": 19.77}}, "unet_4b": {"v1": {"blancos": 5753, "negros": 13995, "ha": 230.12, "km2": 2.301, "pct": 29.13}, "v2": {"blancos": 5627, "negros": 13566, "ha": 225.08, "km2": 2.251, "pct": 29.32}}}}, {"nombre": "S2B_MSIL2A_20190726T144739_N0500_R139_T19LCD_20230701T233116.SAFE", "fecha": "20190726", "fecha_fmt": "2019-07-26", "year": 2019, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 7276, "negros": 12472, "ha": 291.04, "km2": 2.91, "pct": 36.84}, "v2": {"blancos": 6981, "negros": 12212, "ha": 279.24, "km2": 2.792, "pct": 36.37}}, "v2_4b_base": {"v1": {"blancos": 8629, "negros": 11119, "ha": 345.16, "km2": 3.452, "pct": 43.7}, "v2": {"blancos": 8232, "negros": 10961, "ha": 329.28, "km2": 3.293, "pct": 42.89}}, "v3_4b_large": {"v1": {"blancos": 8479, "negros": 11269, "ha": 339.16, "km2": 3.392, "pct": 42.94}, "v2": {"blancos": 8113, "negros": 11080, "ha": 324.52, "km2": 3.245, "pct": 42.27}}, "v2_6b_large": {"v1": {"blancos": 7341, "negros": 12407, "ha": 293.64, "km2": 2.936, "pct": 37.17}, "v2": {"blancos": 7039, "negros": 12154, "ha": 281.56, "km2": 2.816, "pct": 36.67}}, "unet_4b": {"v1": {"blancos": 7151, "negros": 12597, "ha": 286.04, "km2": 2.86, "pct": 36.21}, "v2": {"blancos": 6851, "negros": 12342, "ha": 274.04, "km2": 2.74, "pct": 35.7}}}}, {"nombre": "S2A_MSIL2A_20190731T144741_N0500_R139_T19LCD_20230604T075751.SAFE", "fecha": "20190731", "fecha_fmt": "2019-07-31", "year": 2019, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 7555, "negros": 12193, "ha": 302.2, "km2": 3.022, "pct": 38.26}, "v2": {"blancos": 7134, "negros": 12059, "ha": 285.36, "km2": 2.854, "pct": 37.17}}, "v2_4b_base": {"v1": {"blancos": 7386, "negros": 12362, "ha": 295.44, "km2": 2.954, "pct": 37.4}, "v2": {"blancos": 7026, "negros": 12167, "ha": 281.04, "km2": 2.81, "pct": 36.61}}, "v3_4b_large": {"v1": {"blancos": 5616, "negros": 14132, "ha": 224.64, "km2": 2.246, "pct": 28.44}, "v2": {"blancos": 5294, "negros": 13899, "ha": 211.76, "km2": 2.118, "pct": 27.58}}, "v2_6b_large": {"v1": {"blancos": 7625, "negros": 12123, "ha": 305.0, "km2": 3.05, "pct": 38.61}, "v2": {"blancos": 7198, "negros": 11995, "ha": 287.92, "km2": 2.879, "pct": 37.5}}, "unet_4b": {"v1": {"blancos": 6106, "negros": 13642, "ha": 244.24, "km2": 2.442, "pct": 30.92}, "v2": {"blancos": 5815, "negros": 13378, "ha": 232.6, "km2": 2.326, "pct": 30.3}}}}, {"nombre": "S2B_MSIL2A_20190805T144739_N0500_R139_T19LCD_20230702T030836.SAFE", "fecha": "20190805", "fecha_fmt": "2019-08-05", "year": 2019, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 6873, "negros": 12875, "ha": 274.92, "km2": 2.749, "pct": 34.8}, "v2": {"blancos": 6595, "negros": 12598, "ha": 263.8, "km2": 2.638, "pct": 34.36}}, "v2_4b_base": {"v1": {"blancos": 8837, "negros": 10911, "ha": 353.48, "km2": 3.535, "pct": 44.75}, "v2": {"blancos": 8469, "negros": 10724, "ha": 338.76, "km2": 3.388, "pct": 44.13}}, "v3_4b_large": {"v1": {"blancos": 9273, "negros": 10475, "ha": 370.92, "km2": 3.709, "pct": 46.96}, "v2": {"blancos": 8942, "negros": 10251, "ha": 357.68, "km2": 3.577, "pct": 46.59}}, "v2_6b_large": {"v1": {"blancos": 6930, "negros": 12818, "ha": 277.2, "km2": 2.772, "pct": 35.09}, "v2": {"blancos": 6645, "negros": 12548, "ha": 265.8, "km2": 2.658, "pct": 34.62}}, "unet_4b": {"v1": {"blancos": 6757, "negros": 12991, "ha": 270.28, "km2": 2.703, "pct": 34.22}, "v2": {"blancos": 6537, "negros": 12656, "ha": 261.48, "km2": 2.615, "pct": 34.06}}}}, {"nombre": "S2A_MSIL2A_20190810T144741_N0500_R139_T19LCD_20230714T235826.SAFE", "fecha": "20190810", "fecha_fmt": "2019-08-10", "year": 2019, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 7535, "negros": 12213, "ha": 301.4, "km2": 3.014, "pct": 38.16}, "v2": {"blancos": 7101, "negros": 12092, "ha": 284.04, "km2": 2.84, "pct": 37.0}}, "v2_4b_base": {"v1": {"blancos": 7075, "negros": 12673, "ha": 283.0, "km2": 2.83, "pct": 35.83}, "v2": {"blancos": 6709, "negros": 12484, "ha": 268.36, "km2": 2.684, "pct": 34.96}}, "v3_4b_large": {"v1": {"blancos": 7134, "negros": 12614, "ha": 285.36, "km2": 2.854, "pct": 36.13}, "v2": {"blancos": 6793, "negros": 12400, "ha": 271.72, "km2": 2.717, "pct": 35.39}}, "v2_6b_large": {"v1": {"blancos": 7614, "negros": 12134, "ha": 304.56, "km2": 3.046, "pct": 38.56}, "v2": {"blancos": 7183, "negros": 12010, "ha": 287.32, "km2": 2.873, "pct": 37.43}}, "unet_4b": {"v1": {"blancos": 6331, "negros": 13417, "ha": 253.24, "km2": 2.532, "pct": 32.06}, "v2": {"blancos": 6003, "negros": 13190, "ha": 240.12, "km2": 2.401, "pct": 31.28}}}}, {"nombre": "S2B_MSIL2A_20190815T144739_N0500_R139_T19LCD_20230715T052805.SAFE", "fecha": "20190815", "fecha_fmt": "2019-08-15", "year": 2019, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 6469, "negros": 13279, "ha": 258.76, "km2": 2.588, "pct": 32.76}, "v2": {"blancos": 6169, "negros": 13024, "ha": 246.76, "km2": 2.468, "pct": 32.14}}, "v2_4b_base": {"v1": {"blancos": 7456, "negros": 12292, "ha": 298.24, "km2": 2.982, "pct": 37.76}, "v2": {"blancos": 7112, "negros": 12081, "ha": 284.48, "km2": 2.845, "pct": 37.06}}, "v3_4b_large": {"v1": {"blancos": 9808, "negros": 9940, "ha": 392.32, "km2": 3.923, "pct": 49.67}, "v2": {"blancos": 9483, "negros": 9710, "ha": 379.32, "km2": 3.793, "pct": 49.41}}, "v2_6b_large": {"v1": {"blancos": 6524, "negros": 13224, "ha": 260.96, "km2": 2.61, "pct": 33.04}, "v2": {"blancos": 6225, "negros": 12968, "ha": 249.0, "km2": 2.49, "pct": 32.43}}, "unet_4b": {"v1": {"blancos": 5393, "negros": 14355, "ha": 215.72, "km2": 2.157, "pct": 27.31}, "v2": {"blancos": 5156, "negros": 14037, "ha": 206.24, "km2": 2.062, "pct": 26.86}}}}, {"nombre": "S2A_MSIL2A_20190830T144731_N0500_R139_T19LCD_20230716T001211.SAFE", "fecha": "20190830", "fecha_fmt": "2019-08-30", "year": 2019, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 9066, "negros": 10682, "ha": 362.64, "km2": 3.626, "pct": 45.91}, "v2": {"blancos": 8649, "negros": 10544, "ha": 345.96, "km2": 3.46, "pct": 45.06}}, "v2_4b_base": {"v1": {"blancos": 8727, "negros": 11021, "ha": 349.08, "km2": 3.491, "pct": 44.19}, "v2": {"blancos": 8334, "negros": 10859, "ha": 333.36, "km2": 3.334, "pct": 43.42}}, "v3_4b_large": {"v1": {"blancos": 10812, "negros": 8936, "ha": 432.48, "km2": 4.325, "pct": 54.75}, "v2": {"blancos": 10432, "negros": 8761, "ha": 417.28, "km2": 4.173, "pct": 54.35}}, "v2_6b_large": {"v1": {"blancos": 9147, "negros": 10601, "ha": 365.88, "km2": 3.659, "pct": 46.32}, "v2": {"blancos": 8731, "negros": 10462, "ha": 349.24, "km2": 3.492, "pct": 45.49}}, "unet_4b": {"v1": {"blancos": 6390, "negros": 13358, "ha": 255.6, "km2": 2.556, "pct": 32.36}, "v2": {"blancos": 6101, "negros": 13092, "ha": 244.04, "km2": 2.44, "pct": 31.79}}}}, {"nombre": "S2A_MSIL2A_20200705T144731_N0500_R139_T19LCD_20230530T161342.SAFE", "fecha": "20200705", "fecha_fmt": "2020-07-05", "year": 2020, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 8027, "negros": 11721, "ha": 321.08, "km2": 3.211, "pct": 40.65}, "v2": {"blancos": 7579, "negros": 11614, "ha": 303.16, "km2": 3.032, "pct": 39.49}}, "v2_4b_base": {"v1": {"blancos": 4649, "negros": 15099, "ha": 185.96, "km2": 1.86, "pct": 23.54}, "v2": {"blancos": 4227, "negros": 14966, "ha": 169.08, "km2": 1.691, "pct": 22.02}}, "v3_4b_large": {"v1": {"blancos": 6520, "negros": 13228, "ha": 260.8, "km2": 2.608, "pct": 33.02}, "v2": {"blancos": 6120, "negros": 13073, "ha": 244.8, "km2": 2.448, "pct": 31.89}}, "v2_6b_large": {"v1": {"blancos": 8142, "negros": 11606, "ha": 325.68, "km2": 3.257, "pct": 41.23}, "v2": {"blancos": 7690, "negros": 11503, "ha": 307.6, "km2": 3.076, "pct": 40.07}}, "unet_4b": {"v1": {"blancos": 4399, "negros": 15349, "ha": 175.96, "km2": 1.76, "pct": 22.28}, "v2": {"blancos": 4098, "negros": 15095, "ha": 163.92, "km2": 1.639, "pct": 21.35}}}}, {"nombre": "S2A_MSIL2A_20200715T144731_N0500_R139_T19LCD_20230426T041908.SAFE", "fecha": "20200715", "fecha_fmt": "2020-07-15", "year": 2020, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 7271, "negros": 12477, "ha": 290.84, "km2": 2.908, "pct": 36.82}, "v2": {"blancos": 6840, "negros": 12353, "ha": 273.6, "km2": 2.736, "pct": 35.64}}, "v2_4b_base": {"v1": {"blancos": 4368, "negros": 15380, "ha": 174.72, "km2": 1.747, "pct": 22.12}, "v2": {"blancos": 4032, "negros": 15161, "ha": 161.28, "km2": 1.613, "pct": 21.01}}, "v3_4b_large": {"v1": {"blancos": 6581, "negros": 13167, "ha": 263.24, "km2": 2.632, "pct": 33.32}, "v2": {"blancos": 6160, "negros": 13033, "ha": 246.4, "km2": 2.464, "pct": 32.1}}, "v2_6b_large": {"v1": {"blancos": 7350, "negros": 12398, "ha": 294.0, "km2": 2.94, "pct": 37.22}, "v2": {"blancos": 6918, "negros": 12275, "ha": 276.72, "km2": 2.767, "pct": 36.04}}, "unet_4b": {"v1": {"blancos": 3913, "negros": 15835, "ha": 156.52, "km2": 1.565, "pct": 19.81}, "v2": {"blancos": 3672, "negros": 15521, "ha": 146.88, "km2": 1.469, "pct": 19.13}}}}, {"nombre": "S2B_MSIL2A_20200720T144729_N0500_R139_T19LCD_20230425T130609.SAFE", "fecha": "20200720", "fecha_fmt": "2020-07-20", "year": 2020, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 7264, "negros": 12484, "ha": 290.56, "km2": 2.906, "pct": 36.78}, "v2": {"blancos": 6968, "negros": 12225, "ha": 278.72, "km2": 2.787, "pct": 36.3}}, "v2_4b_base": {"v1": {"blancos": 8130, "negros": 11618, "ha": 325.2, "km2": 3.252, "pct": 41.17}, "v2": {"blancos": 7808, "negros": 11385, "ha": 312.32, "km2": 3.123, "pct": 40.68}}, "v3_4b_large": {"v1": {"blancos": 9326, "negros": 10422, "ha": 373.04, "km2": 3.73, "pct": 47.23}, "v2": {"blancos": 8889, "negros": 10304, "ha": 355.56, "km2": 3.556, "pct": 46.31}}, "v2_6b_large": {"v1": {"blancos": 7314, "negros": 12434, "ha": 292.56, "km2": 2.926, "pct": 37.04}, "v2": {"blancos": 7014, "negros": 12179, "ha": 280.56, "km2": 2.806, "pct": 36.54}}, "unet_4b": {"v1": {"blancos": 2472, "negros": 17276, "ha": 98.88, "km2": 0.989, "pct": 12.52}, "v2": {"blancos": 2279, "negros": 16914, "ha": 91.16, "km2": 0.912, "pct": 11.87}}}}, {"nombre": "S2B_MSIL2A_20200730T144729_N0500_R139_T19LCD_20230416T193041.SAFE", "fecha": "20200730", "fecha_fmt": "2020-07-30", "year": 2020, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 8350, "negros": 11398, "ha": 334.0, "km2": 3.34, "pct": 42.28}, "v2": {"blancos": 8049, "negros": 11144, "ha": 321.96, "km2": 3.22, "pct": 41.94}}, "v2_4b_base": {"v1": {"blancos": 7258, "negros": 12490, "ha": 290.32, "km2": 2.903, "pct": 36.75}, "v2": {"blancos": 7004, "negros": 12189, "ha": 280.16, "km2": 2.802, "pct": 36.49}}, "v3_4b_large": {"v1": {"blancos": 8167, "negros": 11581, "ha": 326.68, "km2": 3.267, "pct": 41.36}, "v2": {"blancos": 7744, "negros": 11449, "ha": 309.76, "km2": 3.098, "pct": 40.35}}, "v2_6b_large": {"v1": {"blancos": 8398, "negros": 11350, "ha": 335.92, "km2": 3.359, "pct": 42.53}, "v2": {"blancos": 8103, "negros": 11090, "ha": 324.12, "km2": 3.241, "pct": 42.22}}, "unet_4b": {"v1": {"blancos": 2212, "negros": 17536, "ha": 88.48, "km2": 0.885, "pct": 11.2}, "v2": {"blancos": 2046, "negros": 17147, "ha": 81.84, "km2": 0.818, "pct": 10.66}}}}, {"nombre": "S2A_MSIL2A_20200804T144731_N0500_R139_T19LCD_20230421T201011.SAFE", "fecha": "20200804", "fecha_fmt": "2020-08-04", "year": 2020, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 11418, "negros": 8330, "ha": 456.72, "km2": 4.567, "pct": 57.82}, "v2": {"blancos": 11022, "negros": 8171, "ha": 440.88, "km2": 4.409, "pct": 57.43}}, "v2_4b_base": {"v1": {"blancos": 10477, "negros": 9271, "ha": 419.08, "km2": 4.191, "pct": 53.05}, "v2": {"blancos": 10215, "negros": 8978, "ha": 408.6, "km2": 4.086, "pct": 53.22}}, "v3_4b_large": {"v1": {"blancos": 11318, "negros": 8430, "ha": 452.72, "km2": 4.527, "pct": 57.31}, "v2": {"blancos": 10881, "negros": 8312, "ha": 435.24, "km2": 4.352, "pct": 56.69}}, "v2_6b_large": {"v1": {"blancos": 11479, "negros": 8269, "ha": 459.16, "km2": 4.592, "pct": 58.13}, "v2": {"blancos": 11082, "negros": 8111, "ha": 443.28, "km2": 4.433, "pct": 57.74}}, "unet_4b": {"v1": {"blancos": 6508, "negros": 13240, "ha": 260.32, "km2": 2.603, "pct": 32.96}, "v2": {"blancos": 6242, "negros": 12951, "ha": 249.68, "km2": 2.497, "pct": 32.52}}}}, {"nombre": "S2B_MSIL2A_20200809T144729_N0500_R139_T19LCD_20230419T154345.SAFE", "fecha": "20200809", "fecha_fmt": "2020-08-09", "year": 2020, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 9917, "negros": 9831, "ha": 396.68, "km2": 3.967, "pct": 50.22}, "v2": {"blancos": 9652, "negros": 9541, "ha": 386.08, "km2": 3.861, "pct": 50.29}}, "v2_4b_base": {"v1": {"blancos": 8190, "negros": 11558, "ha": 327.6, "km2": 3.276, "pct": 41.47}, "v2": {"blancos": 7957, "negros": 11236, "ha": 318.28, "km2": 3.183, "pct": 41.46}}, "v3_4b_large": {"v1": {"blancos": 11588, "negros": 8160, "ha": 463.52, "km2": 4.635, "pct": 58.68}, "v2": {"blancos": 11159, "negros": 8034, "ha": 446.36, "km2": 4.464, "pct": 58.14}}, "v2_6b_large": {"v1": {"blancos": 9967, "negros": 9781, "ha": 398.68, "km2": 3.987, "pct": 50.47}, "v2": {"blancos": 9699, "negros": 9494, "ha": 387.96, "km2": 3.88, "pct": 50.53}}, "unet_4b": {"v1": {"blancos": 3009, "negros": 16739, "ha": 120.36, "km2": 1.204, "pct": 15.24}, "v2": {"blancos": 2809, "negros": 16384, "ha": 112.36, "km2": 1.124, "pct": 14.64}}}}, {"nombre": "S2A_MSIL2A_20200814T144731_N0500_R139_T19LCD_20230420T111846.SAFE", "fecha": "20200814", "fecha_fmt": "2020-08-14", "year": 2020, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 10278, "negros": 9470, "ha": 411.12, "km2": 4.111, "pct": 52.05}, "v2": {"blancos": 9839, "negros": 9354, "ha": 393.56, "km2": 3.936, "pct": 51.26}}, "v2_4b_base": {"v1": {"blancos": 11227, "negros": 8521, "ha": 449.08, "km2": 4.491, "pct": 56.85}, "v2": {"blancos": 10953, "negros": 8240, "ha": 438.12, "km2": 4.381, "pct": 57.07}}, "v3_4b_large": {"v1": {"blancos": 9411, "negros": 10337, "ha": 376.44, "km2": 3.764, "pct": 47.66}, "v2": {"blancos": 8999, "negros": 10194, "ha": 359.96, "km2": 3.6, "pct": 46.89}}, "v2_6b_large": {"v1": {"blancos": 10381, "negros": 9367, "ha": 415.24, "km2": 4.152, "pct": 52.57}, "v2": {"blancos": 9940, "negros": 9253, "ha": 397.6, "km2": 3.976, "pct": 51.79}}, "unet_4b": {"v1": {"blancos": 10112, "negros": 9636, "ha": 404.48, "km2": 4.045, "pct": 51.21}, "v2": {"blancos": 9890, "negros": 9303, "ha": 395.6, "km2": 3.956, "pct": 51.53}}}}, {"nombre": "S2B_MSIL2A_20210705T144729_N0500_R139_T19LCD_20230201T210249.SAFE", "fecha": "20210705", "fecha_fmt": "2021-07-05", "year": 2021, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 3893, "negros": 15855, "ha": 155.72, "km2": 1.557, "pct": 19.71}, "v2": {"blancos": 3451, "negros": 15742, "ha": 138.04, "km2": 1.38, "pct": 17.98}}, "v2_4b_base": {"v1": {"blancos": 5674, "negros": 14074, "ha": 226.96, "km2": 2.27, "pct": 28.73}, "v2": {"blancos": 5186, "negros": 14007, "ha": 207.44, "km2": 2.074, "pct": 27.02}}, "v3_4b_large": {"v1": {"blancos": 3809, "negros": 15939, "ha": 152.36, "km2": 1.524, "pct": 19.29}, "v2": {"blancos": 3279, "negros": 15914, "ha": 131.16, "km2": 1.312, "pct": 17.08}}, "v2_6b_large": {"v1": {"blancos": 3943, "negros": 15805, "ha": 157.72, "km2": 1.577, "pct": 19.97}, "v2": {"blancos": 3496, "negros": 15697, "ha": 139.84, "km2": 1.398, "pct": 18.21}}, "unet_4b": {"v1": {"blancos": 9155, "negros": 10593, "ha": 366.2, "km2": 3.662, "pct": 46.36}, "v2": {"blancos": 8634, "negros": 10559, "ha": 345.36, "km2": 3.454, "pct": 44.99}}}}, {"nombre": "S2A_MSIL2A_20210710T144731_N0500_R139_T19LCD_20230204T202144.SAFE", "fecha": "20210710", "fecha_fmt": "2021-07-10", "year": 2021, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 4591, "negros": 15157, "ha": 183.64, "km2": 1.836, "pct": 23.25}, "v2": {"blancos": 4105, "negros": 15088, "ha": 164.2, "km2": 1.642, "pct": 21.39}}, "v2_4b_base": {"v1": {"blancos": 5965, "negros": 13783, "ha": 238.6, "km2": 2.386, "pct": 30.21}, "v2": {"blancos": 5435, "negros": 13758, "ha": 217.4, "km2": 2.174, "pct": 28.32}}, "v3_4b_large": {"v1": {"blancos": 4245, "negros": 15503, "ha": 169.8, "km2": 1.698, "pct": 21.5}, "v2": {"blancos": 3712, "negros": 15481, "ha": 148.48, "km2": 1.485, "pct": 19.34}}, "v2_6b_large": {"v1": {"blancos": 4617, "negros": 15131, "ha": 184.68, "km2": 1.847, "pct": 23.38}, "v2": {"blancos": 4130, "negros": 15063, "ha": 165.2, "km2": 1.652, "pct": 21.52}}, "unet_4b": {"v1": {"blancos": 9398, "negros": 10350, "ha": 375.92, "km2": 3.759, "pct": 47.59}, "v2": {"blancos": 8910, "negros": 10283, "ha": 356.4, "km2": 3.564, "pct": 46.42}}}}, {"nombre": "S2B_MSIL2A_20210715T144729_N0500_R139_T19LCD_20230224T214537.SAFE", "fecha": "20210715", "fecha_fmt": "2021-07-15", "year": 2021, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 4363, "negros": 15385, "ha": 174.52, "km2": 1.745, "pct": 22.09}, "v2": {"blancos": 3931, "negros": 15262, "ha": 157.24, "km2": 1.572, "pct": 20.48}}, "v2_4b_base": {"v1": {"blancos": 6370, "negros": 13378, "ha": 254.8, "km2": 2.548, "pct": 32.26}, "v2": {"blancos": 5933, "negros": 13260, "ha": 237.32, "km2": 2.373, "pct": 30.91}}, "v3_4b_large": {"v1": {"blancos": 4343, "negros": 15405, "ha": 173.72, "km2": 1.737, "pct": 21.99}, "v2": {"blancos": 3826, "negros": 15367, "ha": 153.04, "km2": 1.53, "pct": 19.93}}, "v2_6b_large": {"v1": {"blancos": 4372, "negros": 15376, "ha": 174.88, "km2": 1.749, "pct": 22.14}, "v2": {"blancos": 3942, "negros": 15251, "ha": 157.68, "km2": 1.577, "pct": 20.54}}, "unet_4b": {"v1": {"blancos": 10177, "negros": 9571, "ha": 407.08, "km2": 4.071, "pct": 51.53}, "v2": {"blancos": 9688, "negros": 9505, "ha": 387.52, "km2": 3.875, "pct": 50.48}}}}, {"nombre": "S2A_MSIL2A_20210809T144731_N0500_R139_T19LCD_20230117T132957.SAFE", "fecha": "20210809", "fecha_fmt": "2021-08-09", "year": 2021, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 7177, "negros": 12571, "ha": 287.08, "km2": 2.871, "pct": 36.34}, "v2": {"blancos": 6736, "negros": 12457, "ha": 269.44, "km2": 2.694, "pct": 35.1}}, "v2_4b_base": {"v1": {"blancos": 8647, "negros": 11101, "ha": 345.88, "km2": 3.459, "pct": 43.79}, "v2": {"blancos": 8250, "negros": 10943, "ha": 330.0, "km2": 3.3, "pct": 42.98}}, "v3_4b_large": {"v1": {"blancos": 5162, "negros": 14586, "ha": 206.48, "km2": 2.065, "pct": 26.14}, "v2": {"blancos": 4849, "negros": 14344, "ha": 193.96, "km2": 1.94, "pct": 25.26}}, "v2_6b_large": {"v1": {"blancos": 7242, "negros": 12506, "ha": 289.68, "km2": 2.897, "pct": 36.67}, "v2": {"blancos": 6800, "negros": 12393, "ha": 272.0, "km2": 2.72, "pct": 35.43}}, "unet_4b": {"v1": {"blancos": 9156, "negros": 10592, "ha": 366.24, "km2": 3.662, "pct": 46.36}, "v2": {"blancos": 8847, "negros": 10346, "ha": 353.88, "km2": 3.539, "pct": 46.09}}}}, {"nombre": "S2A_MSIL2A_20210819T144731_N0500_R139_T19LCD_20230208T235523.SAFE", "fecha": "20210819", "fecha_fmt": "2021-08-19", "year": 2021, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 7871, "negros": 11877, "ha": 314.84, "km2": 3.148, "pct": 39.86}, "v2": {"blancos": 7435, "negros": 11758, "ha": 297.4, "km2": 2.974, "pct": 38.74}}, "v2_4b_base": {"v1": {"blancos": 9550, "negros": 10198, "ha": 382.0, "km2": 3.82, "pct": 48.36}, "v2": {"blancos": 9166, "negros": 10027, "ha": 366.64, "km2": 3.666, "pct": 47.76}}, "v3_4b_large": {"v1": {"blancos": 5480, "negros": 14268, "ha": 219.2, "km2": 2.192, "pct": 27.75}, "v2": {"blancos": 5188, "negros": 14005, "ha": 207.52, "km2": 2.075, "pct": 27.03}}, "v2_6b_large": {"v1": {"blancos": 7939, "negros": 11809, "ha": 317.56, "km2": 3.176, "pct": 40.2}, "v2": {"blancos": 7504, "negros": 11689, "ha": 300.16, "km2": 3.002, "pct": 39.1}}, "unet_4b": {"v1": {"blancos": 7472, "negros": 12276, "ha": 298.88, "km2": 2.989, "pct": 37.84}, "v2": {"blancos": 7181, "negros": 12012, "ha": 287.24, "km2": 2.872, "pct": 37.41}}}}, {"nombre": "S2A_MSIL2A_20220705T144741_N0510_R139_T19LCD_20240623T162802.SAFE", "fecha": "20220705", "fecha_fmt": "2022-07-05", "year": 2022, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2571, "negros": 17177, "ha": 102.84, "km2": 1.028, "pct": 13.02}, "v2": {"blancos": 2089, "negros": 17104, "ha": 83.56, "km2": 0.836, "pct": 10.88}}, "v2_4b_base": {"v1": {"blancos": 2921, "negros": 16827, "ha": 116.84, "km2": 1.168, "pct": 14.79}, "v2": {"blancos": 2409, "negros": 16784, "ha": 96.36, "km2": 0.964, "pct": 12.55}}, "v3_4b_large": {"v1": {"blancos": 2784, "negros": 16964, "ha": 111.36, "km2": 1.114, "pct": 14.1}, "v2": {"blancos": 2295, "negros": 16898, "ha": 91.8, "km2": 0.918, "pct": 11.96}}, "v2_6b_large": {"v1": {"blancos": 2563, "negros": 17185, "ha": 102.52, "km2": 1.025, "pct": 12.98}, "v2": {"blancos": 2080, "negros": 17113, "ha": 83.2, "km2": 0.832, "pct": 10.84}}, "unet_4b": {"v1": {"blancos": 2932, "negros": 16816, "ha": 117.28, "km2": 1.173, "pct": 14.85}, "v2": {"blancos": 2426, "negros": 16767, "ha": 97.04, "km2": 0.97, "pct": 12.64}}}}, {"nombre": "S2A_MSIL2A_20220715T144741_N0510_R139_T19LCD_20240717T030539.SAFE", "fecha": "20220715", "fecha_fmt": "2022-07-15", "year": 2022, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2378, "negros": 17370, "ha": 95.12, "km2": 0.951, "pct": 12.04}, "v2": {"blancos": 1895, "negros": 17298, "ha": 75.8, "km2": 0.758, "pct": 9.87}}, "v2_4b_base": {"v1": {"blancos": 3174, "negros": 16574, "ha": 126.96, "km2": 1.27, "pct": 16.07}, "v2": {"blancos": 2658, "negros": 16535, "ha": 106.32, "km2": 1.063, "pct": 13.85}}, "v3_4b_large": {"v1": {"blancos": 2903, "negros": 16845, "ha": 116.12, "km2": 1.161, "pct": 14.7}, "v2": {"blancos": 2411, "negros": 16782, "ha": 96.44, "km2": 0.964, "pct": 12.56}}, "v2_6b_large": {"v1": {"blancos": 2378, "negros": 17370, "ha": 95.12, "km2": 0.951, "pct": 12.04}, "v2": {"blancos": 1894, "negros": 17299, "ha": 75.76, "km2": 0.758, "pct": 9.87}}, "unet_4b": {"v1": {"blancos": 2953, "negros": 16795, "ha": 118.12, "km2": 1.181, "pct": 14.95}, "v2": {"blancos": 2454, "negros": 16739, "ha": 98.16, "km2": 0.982, "pct": 12.79}}}}, {"nombre": "S2A_MSIL2A_20220725T144741_N0510_R139_T19LCD_20240714T204546.SAFE", "fecha": "20220725", "fecha_fmt": "2022-07-25", "year": 2022, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2883, "negros": 16865, "ha": 115.32, "km2": 1.153, "pct": 14.6}, "v2": {"blancos": 2380, "negros": 16813, "ha": 95.2, "km2": 0.952, "pct": 12.4}}, "v2_4b_base": {"v1": {"blancos": 3562, "negros": 16186, "ha": 142.48, "km2": 1.425, "pct": 18.04}, "v2": {"blancos": 3036, "negros": 16157, "ha": 121.44, "km2": 1.214, "pct": 15.82}}, "v3_4b_large": {"v1": {"blancos": 3137, "negros": 16611, "ha": 125.48, "km2": 1.255, "pct": 15.89}, "v2": {"blancos": 2638, "negros": 16555, "ha": 105.52, "km2": 1.055, "pct": 13.74}}, "v2_6b_large": {"v1": {"blancos": 2884, "negros": 16864, "ha": 115.36, "km2": 1.154, "pct": 14.6}, "v2": {"blancos": 2383, "negros": 16810, "ha": 95.32, "km2": 0.953, "pct": 12.42}}, "unet_4b": {"v1": {"blancos": 3184, "negros": 16564, "ha": 127.36, "km2": 1.274, "pct": 16.12}, "v2": {"blancos": 2674, "negros": 16519, "ha": 106.96, "km2": 1.07, "pct": 13.93}}}}, {"nombre": "S2B_MSIL2A_20220730T144729_N0510_R139_T19LCD_20240717T071725.SAFE", "fecha": "20220730", "fecha_fmt": "2022-07-30", "year": 2022, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 2527, "negros": 17221, "ha": 101.08, "km2": 1.011, "pct": 12.8}, "v2": {"blancos": 2055, "negros": 17138, "ha": 82.2, "km2": 0.822, "pct": 10.71}}, "v2_4b_base": {"v1": {"blancos": 3518, "negros": 16230, "ha": 140.72, "km2": 1.407, "pct": 17.81}, "v2": {"blancos": 2993, "negros": 16200, "ha": 119.72, "km2": 1.197, "pct": 15.59}}, "v3_4b_large": {"v1": {"blancos": 2943, "negros": 16805, "ha": 117.72, "km2": 1.177, "pct": 14.9}, "v2": {"blancos": 2454, "negros": 16739, "ha": 98.16, "km2": 0.982, "pct": 12.79}}, "v2_6b_large": {"v1": {"blancos": 2519, "negros": 17229, "ha": 100.76, "km2": 1.008, "pct": 12.76}, "v2": {"blancos": 2050, "negros": 17143, "ha": 82.0, "km2": 0.82, "pct": 10.68}}, "unet_4b": {"v1": {"blancos": 3005, "negros": 16743, "ha": 120.2, "km2": 1.202, "pct": 15.22}, "v2": {"blancos": 2532, "negros": 16661, "ha": 101.28, "km2": 1.013, "pct": 13.19}}}}, {"nombre": "S2A_MSIL2A_20220814T144741_N0510_R139_T19LCD_20240703T134048.SAFE", "fecha": "20220814", "fecha_fmt": "2022-08-14", "year": 2022, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 3183, "negros": 16565, "ha": 127.32, "km2": 1.273, "pct": 16.12}, "v2": {"blancos": 2670, "negros": 16523, "ha": 106.8, "km2": 1.068, "pct": 13.91}}, "v2_4b_base": {"v1": {"blancos": 3832, "negros": 15916, "ha": 153.28, "km2": 1.533, "pct": 19.4}, "v2": {"blancos": 3292, "negros": 15901, "ha": 131.68, "km2": 1.317, "pct": 17.15}}, "v3_4b_large": {"v1": {"blancos": 2777, "negros": 16971, "ha": 111.08, "km2": 1.111, "pct": 14.06}, "v2": {"blancos": 2290, "negros": 16903, "ha": 91.6, "km2": 0.916, "pct": 11.93}}, "v2_6b_large": {"v1": {"blancos": 3197, "negros": 16551, "ha": 127.88, "km2": 1.279, "pct": 16.19}, "v2": {"blancos": 2683, "negros": 16510, "ha": 107.32, "km2": 1.073, "pct": 13.98}}, "unet_4b": {"v1": {"blancos": 3451, "negros": 16297, "ha": 138.04, "km2": 1.38, "pct": 17.48}, "v2": {"blancos": 2955, "negros": 16238, "ha": 118.2, "km2": 1.182, "pct": 15.4}}}}, {"nombre": "S2B_MSIL2A_20220819T144729_N0510_R139_T19LCD_20240703T231009.SAFE", "fecha": "20220819", "fecha_fmt": "2022-08-19", "year": 2022, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 3060, "negros": 16688, "ha": 122.4, "km2": 1.224, "pct": 15.5}, "v2": {"blancos": 2567, "negros": 16626, "ha": 102.68, "km2": 1.027, "pct": 13.37}}, "v2_4b_base": {"v1": {"blancos": 4201, "negros": 15547, "ha": 168.04, "km2": 1.68, "pct": 21.27}, "v2": {"blancos": 3659, "negros": 15534, "ha": 146.36, "km2": 1.464, "pct": 19.06}}, "v3_4b_large": {"v1": {"blancos": 2988, "negros": 16760, "ha": 119.52, "km2": 1.195, "pct": 15.13}, "v2": {"blancos": 2508, "negros": 16685, "ha": 100.32, "km2": 1.003, "pct": 13.07}}, "v2_6b_large": {"v1": {"blancos": 3072, "negros": 16676, "ha": 122.88, "km2": 1.229, "pct": 15.56}, "v2": {"blancos": 2579, "negros": 16614, "ha": 103.16, "km2": 1.032, "pct": 13.44}}, "unet_4b": {"v1": {"blancos": 2935, "negros": 16813, "ha": 117.4, "km2": 1.174, "pct": 14.86}, "v2": {"blancos": 2503, "negros": 16690, "ha": 100.12, "km2": 1.001, "pct": 13.04}}}}, {"nombre": "S2A_MSIL2A_20220824T144741_N0510_R139_T19LCD_20240704T164843.SAFE", "fecha": "20220824", "fecha_fmt": "2022-08-24", "year": 2022, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 3867, "negros": 15881, "ha": 154.68, "km2": 1.547, "pct": 19.58}, "v2": {"blancos": 3332, "negros": 15861, "ha": 133.28, "km2": 1.333, "pct": 17.36}}, "v2_4b_base": {"v1": {"blancos": 4896, "negros": 14852, "ha": 195.84, "km2": 1.958, "pct": 24.79}, "v2": {"blancos": 4349, "negros": 14844, "ha": 173.96, "km2": 1.74, "pct": 22.66}}, "v3_4b_large": {"v1": {"blancos": 3940, "negros": 15808, "ha": 157.6, "km2": 1.576, "pct": 19.95}, "v2": {"blancos": 3443, "negros": 15750, "ha": 137.72, "km2": 1.377, "pct": 17.94}}, "v2_6b_large": {"v1": {"blancos": 3885, "negros": 15863, "ha": 155.4, "km2": 1.554, "pct": 19.67}, "v2": {"blancos": 3348, "negros": 15845, "ha": 133.92, "km2": 1.339, "pct": 17.44}}, "unet_4b": {"v1": {"blancos": 4097, "negros": 15651, "ha": 163.88, "km2": 1.639, "pct": 20.75}, "v2": {"blancos": 3626, "negros": 15567, "ha": 145.04, "km2": 1.45, "pct": 18.89}}}}, {"nombre": "S2B_MSIL2A_20230705T144729_N0510_R139_T19LCD_20240913T083442.SAFE", "fecha": "20230705", "fecha_fmt": "2023-07-05", "year": 2023, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 12750, "negros": 6998, "ha": 510.0, "km2": 5.1, "pct": 64.56}, "v2": {"blancos": 12567, "negros": 6626, "ha": 502.68, "km2": 5.027, "pct": 65.48}}, "v2_4b_base": {"v1": {"blancos": 12807, "negros": 6941, "ha": 512.28, "km2": 5.123, "pct": 64.85}, "v2": {"blancos": 12413, "negros": 6780, "ha": 496.52, "km2": 4.965, "pct": 64.67}}, "v3_4b_large": {"v1": {"blancos": 13677, "negros": 6071, "ha": 547.08, "km2": 5.471, "pct": 69.26}, "v2": {"blancos": 13441, "negros": 5752, "ha": 537.64, "km2": 5.376, "pct": 70.03}}, "v2_6b_large": {"v1": {"blancos": 12800, "negros": 6948, "ha": 512.0, "km2": 5.12, "pct": 64.82}, "v2": {"blancos": 12609, "negros": 6584, "ha": 504.36, "km2": 5.044, "pct": 65.7}}, "unet_4b": {"v1": {"blancos": 5066, "negros": 14682, "ha": 202.64, "km2": 2.026, "pct": 25.65}, "v2": {"blancos": 4993, "negros": 14200, "ha": 199.72, "km2": 1.997, "pct": 26.01}}}}, {"nombre": "S2A_MSIL2A_20230710T144731_N0510_R139_T19LCD_20241021T002952.SAFE", "fecha": "20230710", "fecha_fmt": "2023-07-10", "year": 2023, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 13689, "negros": 6059, "ha": 547.56, "km2": 5.476, "pct": 69.32}, "v2": {"blancos": 13347, "negros": 5846, "ha": 533.88, "km2": 5.339, "pct": 69.54}}, "v2_4b_base": {"v1": {"blancos": 9632, "negros": 10116, "ha": 385.28, "km2": 3.853, "pct": 48.77}, "v2": {"blancos": 9248, "negros": 9945, "ha": 369.92, "km2": 3.699, "pct": 48.18}}, "v3_4b_large": {"v1": {"blancos": 12159, "negros": 7589, "ha": 486.36, "km2": 4.864, "pct": 61.57}, "v2": {"blancos": 11910, "negros": 7283, "ha": 476.4, "km2": 4.764, "pct": 62.05}}, "v2_6b_large": {"v1": {"blancos": 13735, "negros": 6013, "ha": 549.4, "km2": 5.494, "pct": 69.55}, "v2": {"blancos": 13392, "negros": 5801, "ha": 535.68, "km2": 5.357, "pct": 69.78}}, "unet_4b": {"v1": {"blancos": 5900, "negros": 13848, "ha": 236.0, "km2": 2.36, "pct": 29.88}, "v2": {"blancos": 5786, "negros": 13407, "ha": 231.44, "km2": 2.314, "pct": 30.15}}}}, {"nombre": "S2B_MSIL2A_20230715T144729_N0510_R139_T19LCD_20240917T195800.SAFE", "fecha": "20230715", "fecha_fmt": "2023-07-15", "year": 2023, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 12608, "negros": 7140, "ha": 504.32, "km2": 5.043, "pct": 63.84}, "v2": {"blancos": 12445, "negros": 6748, "ha": 497.8, "km2": 4.978, "pct": 64.84}}, "v2_4b_base": {"v1": {"blancos": 9018, "negros": 10730, "ha": 360.72, "km2": 3.607, "pct": 45.67}, "v2": {"blancos": 8668, "negros": 10525, "ha": 346.72, "km2": 3.467, "pct": 45.16}}, "v3_4b_large": {"v1": {"blancos": 11991, "negros": 7757, "ha": 479.64, "km2": 4.796, "pct": 60.72}, "v2": {"blancos": 11753, "negros": 7440, "ha": 470.12, "km2": 4.701, "pct": 61.24}}, "v2_6b_large": {"v1": {"blancos": 12671, "negros": 7077, "ha": 506.84, "km2": 5.068, "pct": 64.16}, "v2": {"blancos": 12497, "negros": 6696, "ha": 499.88, "km2": 4.999, "pct": 65.11}}, "unet_4b": {"v1": {"blancos": 4559, "negros": 15189, "ha": 182.36, "km2": 1.824, "pct": 23.09}, "v2": {"blancos": 4498, "negros": 14695, "ha": 179.92, "km2": 1.799, "pct": 23.44}}}}, {"nombre": "S2A_MSIL2A_20230720T144731_N0510_R139_T19LCD_20240913T195540.SAFE", "fecha": "20230720", "fecha_fmt": "2023-07-20", "year": 2023, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 13161, "negros": 6587, "ha": 526.44, "km2": 5.264, "pct": 66.64}, "v2": {"blancos": 12829, "negros": 6364, "ha": 513.16, "km2": 5.132, "pct": 66.84}}, "v2_4b_base": {"v1": {"blancos": 11108, "negros": 8640, "ha": 444.32, "km2": 4.443, "pct": 56.25}, "v2": {"blancos": 10717, "negros": 8476, "ha": 428.68, "km2": 4.287, "pct": 55.84}}, "v3_4b_large": {"v1": {"blancos": 11076, "negros": 8672, "ha": 443.04, "km2": 4.43, "pct": 56.09}, "v2": {"blancos": 10742, "negros": 8451, "ha": 429.68, "km2": 4.297, "pct": 55.97}}, "v2_6b_large": {"v1": {"blancos": 13192, "negros": 6556, "ha": 527.68, "km2": 5.277, "pct": 66.8}, "v2": {"blancos": 12865, "negros": 6328, "ha": 514.6, "km2": 5.146, "pct": 67.03}}, "unet_4b": {"v1": {"blancos": 5659, "negros": 14089, "ha": 226.36, "km2": 2.264, "pct": 28.66}, "v2": {"blancos": 5541, "negros": 13652, "ha": 221.64, "km2": 2.216, "pct": 28.87}}}}, {"nombre": "S2B_MSIL2A_20230725T144729_N0510_R139_T19LCD_20240929T190038.SAFE", "fecha": "20230725", "fecha_fmt": "2023-07-25", "year": 2023, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 12470, "negros": 7278, "ha": 498.8, "km2": 4.988, "pct": 63.15}, "v2": {"blancos": 12318, "negros": 6875, "ha": 492.72, "km2": 4.927, "pct": 64.18}}, "v2_4b_base": {"v1": {"blancos": 10846, "negros": 8902, "ha": 433.84, "km2": 4.338, "pct": 54.92}, "v2": {"blancos": 10512, "negros": 8681, "ha": 420.48, "km2": 4.205, "pct": 54.77}}, "v3_4b_large": {"v1": {"blancos": 10705, "negros": 9043, "ha": 428.2, "km2": 4.282, "pct": 54.21}, "v2": {"blancos": 10452, "negros": 8741, "ha": 418.08, "km2": 4.181, "pct": 54.46}}, "v2_6b_large": {"v1": {"blancos": 12523, "negros": 7225, "ha": 500.92, "km2": 5.009, "pct": 63.41}, "v2": {"blancos": 12368, "negros": 6825, "ha": 494.72, "km2": 4.947, "pct": 64.44}}, "unet_4b": {"v1": {"blancos": 3323, "negros": 16425, "ha": 132.92, "km2": 1.329, "pct": 16.83}, "v2": {"blancos": 3279, "negros": 15914, "ha": 131.16, "km2": 1.312, "pct": 17.08}}}}, {"nombre": "S2A_MSIL2A_20230809T144731_N0510_R139_T19LCD_20241018T130909.SAFE", "fecha": "20230809", "fecha_fmt": "2023-08-09", "year": 2023, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 9833, "negros": 9915, "ha": 393.32, "km2": 3.933, "pct": 49.79}, "v2": {"blancos": 9462, "negros": 9731, "ha": 378.48, "km2": 3.785, "pct": 49.3}}, "v2_4b_base": {"v1": {"blancos": 9296, "negros": 10452, "ha": 371.84, "km2": 3.718, "pct": 47.07}, "v2": {"blancos": 8944, "negros": 10249, "ha": 357.76, "km2": 3.578, "pct": 46.6}}, "v3_4b_large": {"v1": {"blancos": 9727, "negros": 10021, "ha": 389.08, "km2": 3.891, "pct": 49.26}, "v2": {"blancos": 9291, "negros": 9902, "ha": 371.64, "km2": 3.716, "pct": 48.41}}, "v2_6b_large": {"v1": {"blancos": 9864, "negros": 9884, "ha": 394.56, "km2": 3.946, "pct": 49.95}, "v2": {"blancos": 9486, "negros": 9707, "ha": 379.44, "km2": 3.794, "pct": 49.42}}, "unet_4b": {"v1": {"blancos": 11791, "negros": 7957, "ha": 471.64, "km2": 4.716, "pct": 59.71}, "v2": {"blancos": 11647, "negros": 7546, "ha": 465.88, "km2": 4.659, "pct": 60.68}}}}, {"nombre": "S2A_MSIL2A_20230819T144731_N0510_R139_T19LCD_20241025T214302.SAFE", "fecha": "20230819", "fecha_fmt": "2023-08-19", "year": 2023, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 14849, "negros": 4899, "ha": 593.96, "km2": 5.94, "pct": 75.19}, "v2": {"blancos": 14537, "negros": 4656, "ha": 581.48, "km2": 5.815, "pct": 75.74}}, "v2_4b_base": {"v1": {"blancos": 14292, "negros": 5456, "ha": 571.68, "km2": 5.717, "pct": 72.37}, "v2": {"blancos": 14028, "negros": 5165, "ha": 561.12, "km2": 5.611, "pct": 73.09}}, "v3_4b_large": {"v1": {"blancos": 15130, "negros": 4618, "ha": 605.2, "km2": 6.052, "pct": 76.62}, "v2": {"blancos": 14667, "negros": 4526, "ha": 586.68, "km2": 5.867, "pct": 76.42}}, "v2_6b_large": {"v1": {"blancos": 14904, "negros": 4844, "ha": 596.16, "km2": 5.962, "pct": 75.47}, "v2": {"blancos": 14584, "negros": 4609, "ha": 583.36, "km2": 5.834, "pct": 75.99}}, "unet_4b": {"v1": {"blancos": 12881, "negros": 6867, "ha": 515.24, "km2": 5.152, "pct": 65.23}, "v2": {"blancos": 12759, "negros": 6434, "ha": 510.36, "km2": 5.104, "pct": 66.48}}}}, {"nombre": "S2B_MSIL2A_20230824T144729_N0510_R139_T19LCD_20241020T104759.SAFE", "fecha": "20230824", "fecha_fmt": "2023-08-24", "year": 2023, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 11111, "negros": 8637, "ha": 444.44, "km2": 4.444, "pct": 56.26}, "v2": {"blancos": 10969, "negros": 8224, "ha": 438.76, "km2": 4.388, "pct": 57.15}}, "v2_4b_base": {"v1": {"blancos": 12420, "negros": 7328, "ha": 496.8, "km2": 4.968, "pct": 62.89}, "v2": {"blancos": 12182, "negros": 7011, "ha": 487.28, "km2": 4.873, "pct": 63.47}}, "v3_4b_large": {"v1": {"blancos": 9130, "negros": 10618, "ha": 365.2, "km2": 3.652, "pct": 46.23}, "v2": {"blancos": 8784, "negros": 10409, "ha": 351.36, "km2": 3.514, "pct": 45.77}}, "v2_6b_large": {"v1": {"blancos": 11249, "negros": 8499, "ha": 449.96, "km2": 4.5, "pct": 56.96}, "v2": {"blancos": 11098, "negros": 8095, "ha": 443.92, "km2": 4.439, "pct": 57.82}}, "unet_4b": {"v1": {"blancos": 12459, "negros": 7289, "ha": 498.36, "km2": 4.984, "pct": 63.09}, "v2": {"blancos": 12353, "negros": 6840, "ha": 494.12, "km2": 4.941, "pct": 64.36}}}}, {"nombre": "S2A_MSIL2A_20230829T144731_N0510_R139_T19LCD_20241019T004616.SAFE", "fecha": "20230829", "fecha_fmt": "2023-08-29", "year": 2023, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 10566, "negros": 9182, "ha": 422.64, "km2": 4.226, "pct": 53.5}, "v2": {"blancos": 10237, "negros": 8956, "ha": 409.48, "km2": 4.095, "pct": 53.34}}, "v2_4b_base": {"v1": {"blancos": 10857, "negros": 8891, "ha": 434.28, "km2": 4.343, "pct": 54.98}, "v2": {"blancos": 10564, "negros": 8629, "ha": 422.56, "km2": 4.226, "pct": 55.04}}, "v3_4b_large": {"v1": {"blancos": 10242, "negros": 9506, "ha": 409.68, "km2": 4.097, "pct": 51.86}, "v2": {"blancos": 9863, "negros": 9330, "ha": 394.52, "km2": 3.945, "pct": 51.39}}, "v2_6b_large": {"v1": {"blancos": 10748, "negros": 9000, "ha": 429.92, "km2": 4.299, "pct": 54.43}, "v2": {"blancos": 10418, "negros": 8775, "ha": 416.72, "km2": 4.167, "pct": 54.28}}, "unet_4b": {"v1": {"blancos": 11864, "negros": 7884, "ha": 474.56, "km2": 4.746, "pct": 60.08}, "v2": {"blancos": 11724, "negros": 7469, "ha": 468.96, "km2": 4.69, "pct": 61.08}}}}, {"nombre": "S2A_MSIL2A_20240704T144731_N0510_R139_T19LCD_20240704T220646.SAFE", "fecha": "20240704", "fecha_fmt": "2024-07-04", "year": 2024, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2959, "negros": 16789, "ha": 118.36, "km2": 1.184, "pct": 14.98}, "v2": {"blancos": 2466, "negros": 16727, "ha": 98.64, "km2": 0.986, "pct": 12.85}}, "v2_4b_base": {"v1": {"blancos": 4077, "negros": 15671, "ha": 163.08, "km2": 1.631, "pct": 20.65}, "v2": {"blancos": 3544, "negros": 15649, "ha": 141.76, "km2": 1.418, "pct": 18.47}}, "v3_4b_large": {"v1": {"blancos": 3388, "negros": 16360, "ha": 135.52, "km2": 1.355, "pct": 17.16}, "v2": {"blancos": 2891, "negros": 16302, "ha": 115.64, "km2": 1.156, "pct": 15.06}}, "v2_6b_large": {"v1": {"blancos": 2996, "negros": 16752, "ha": 119.84, "km2": 1.198, "pct": 15.17}, "v2": {"blancos": 2502, "negros": 16691, "ha": 100.08, "km2": 1.001, "pct": 13.04}}, "unet_4b": {"v1": {"blancos": 3541, "negros": 16207, "ha": 141.64, "km2": 1.416, "pct": 17.93}, "v2": {"blancos": 3072, "negros": 16121, "ha": 122.88, "km2": 1.229, "pct": 16.01}}}}, {"nombre": "S2B_MSIL2A_20240709T144729_N0510_R139_T19LCD_20240709T184454.SAFE", "fecha": "20240709", "fecha_fmt": "2024-07-09", "year": 2024, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 2429, "negros": 17319, "ha": 97.16, "km2": 0.972, "pct": 12.3}, "v2": {"blancos": 2011, "negros": 17182, "ha": 80.44, "km2": 0.804, "pct": 10.48}}, "v2_4b_base": {"v1": {"blancos": 4168, "negros": 15580, "ha": 166.72, "km2": 1.667, "pct": 21.11}, "v2": {"blancos": 3646, "negros": 15547, "ha": 145.84, "km2": 1.458, "pct": 19.0}}, "v3_4b_large": {"v1": {"blancos": 2797, "negros": 16951, "ha": 111.88, "km2": 1.119, "pct": 14.16}, "v2": {"blancos": 2312, "negros": 16881, "ha": 92.48, "km2": 0.925, "pct": 12.05}}, "v2_6b_large": {"v1": {"blancos": 2428, "negros": 17320, "ha": 97.12, "km2": 0.971, "pct": 12.29}, "v2": {"blancos": 2010, "negros": 17183, "ha": 80.4, "km2": 0.804, "pct": 10.47}}, "unet_4b": {"v1": {"blancos": 3371, "negros": 16377, "ha": 134.84, "km2": 1.348, "pct": 17.07}, "v2": {"blancos": 2936, "negros": 16257, "ha": 117.44, "km2": 1.174, "pct": 15.3}}}}, {"nombre": "S2A_MSIL2A_20240714T144731_N0510_R139_T19LCD_20240714T215849.SAFE", "fecha": "20240714", "fecha_fmt": "2024-07-14", "year": 2024, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2579, "negros": 17169, "ha": 103.16, "km2": 1.032, "pct": 13.06}, "v2": {"blancos": 2076, "negros": 17117, "ha": 83.04, "km2": 0.83, "pct": 10.82}}, "v2_4b_base": {"v1": {"blancos": 4331, "negros": 15417, "ha": 173.24, "km2": 1.732, "pct": 21.93}, "v2": {"blancos": 3793, "negros": 15400, "ha": 151.72, "km2": 1.517, "pct": 19.76}}, "v3_4b_large": {"v1": {"blancos": 3492, "negros": 16256, "ha": 139.68, "km2": 1.397, "pct": 17.68}, "v2": {"blancos": 2991, "negros": 16202, "ha": 119.64, "km2": 1.196, "pct": 15.58}}, "v2_6b_large": {"v1": {"blancos": 2550, "negros": 17198, "ha": 102.0, "km2": 1.02, "pct": 12.91}, "v2": {"blancos": 2046, "negros": 17147, "ha": 81.84, "km2": 0.818, "pct": 10.66}}, "unet_4b": {"v1": {"blancos": 3958, "negros": 15790, "ha": 158.32, "km2": 1.583, "pct": 20.04}, "v2": {"blancos": 3490, "negros": 15703, "ha": 139.6, "km2": 1.396, "pct": 18.18}}}}, {"nombre": "S2B_MSIL2A_20240719T144739_N0510_R139_T19LCD_20240719T202526.SAFE", "fecha": "20240719", "fecha_fmt": "2024-07-19", "year": 2024, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 2209, "negros": 17539, "ha": 88.36, "km2": 0.884, "pct": 11.19}, "v2": {"blancos": 1781, "negros": 17412, "ha": 71.24, "km2": 0.712, "pct": 9.28}}, "v2_4b_base": {"v1": {"blancos": 4589, "negros": 15159, "ha": 183.56, "km2": 1.836, "pct": 23.24}, "v2": {"blancos": 4058, "negros": 15135, "ha": 162.32, "km2": 1.623, "pct": 21.14}}, "v3_4b_large": {"v1": {"blancos": 3592, "negros": 16156, "ha": 143.68, "km2": 1.437, "pct": 18.19}, "v2": {"blancos": 3094, "negros": 16099, "ha": 123.76, "km2": 1.238, "pct": 16.12}}, "v2_6b_large": {"v1": {"blancos": 2211, "negros": 17537, "ha": 88.44, "km2": 0.884, "pct": 11.2}, "v2": {"blancos": 1779, "negros": 17414, "ha": 71.16, "km2": 0.712, "pct": 9.27}}, "unet_4b": {"v1": {"blancos": 3773, "negros": 15975, "ha": 150.92, "km2": 1.509, "pct": 19.11}, "v2": {"blancos": 3361, "negros": 15832, "ha": 134.44, "km2": 1.344, "pct": 17.51}}}}, {"nombre": "S2A_MSIL2A_20240724T144731_N0511_R139_T19LCD_20240724T234800.SAFE", "fecha": "20240724", "fecha_fmt": "2024-07-24", "year": 2024, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2811, "negros": 16937, "ha": 112.44, "km2": 1.124, "pct": 14.23}, "v2": {"blancos": 2313, "negros": 16880, "ha": 92.52, "km2": 0.925, "pct": 12.05}}, "v2_4b_base": {"v1": {"blancos": 5319, "negros": 14429, "ha": 212.76, "km2": 2.128, "pct": 26.93}, "v2": {"blancos": 4774, "negros": 14419, "ha": 190.96, "km2": 1.91, "pct": 24.87}}, "v3_4b_large": {"v1": {"blancos": 4558, "negros": 15190, "ha": 182.32, "km2": 1.823, "pct": 23.08}, "v2": {"blancos": 4041, "negros": 15152, "ha": 161.64, "km2": 1.616, "pct": 21.05}}, "v2_6b_large": {"v1": {"blancos": 2802, "negros": 16946, "ha": 112.08, "km2": 1.121, "pct": 14.19}, "v2": {"blancos": 2306, "negros": 16887, "ha": 92.24, "km2": 0.922, "pct": 12.01}}, "unet_4b": {"v1": {"blancos": 4479, "negros": 15269, "ha": 179.16, "km2": 1.792, "pct": 22.68}, "v2": {"blancos": 4018, "negros": 15175, "ha": 160.72, "km2": 1.607, "pct": 20.93}}}}, {"nombre": "S2B_MSIL2A_20240729T144729_N0511_R139_T19LCD_20240729T183906.SAFE", "fecha": "20240729", "fecha_fmt": "2024-07-29", "year": 2024, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 3132, "negros": 16616, "ha": 125.28, "km2": 1.253, "pct": 15.86}, "v2": {"blancos": 2620, "negros": 16573, "ha": 104.8, "km2": 1.048, "pct": 13.65}}, "v2_4b_base": {"v1": {"blancos": 6163, "negros": 13585, "ha": 246.52, "km2": 2.465, "pct": 31.21}, "v2": {"blancos": 5614, "negros": 13579, "ha": 224.56, "km2": 2.246, "pct": 29.25}}, "v3_4b_large": {"v1": {"blancos": 5324, "negros": 14424, "ha": 212.96, "km2": 2.13, "pct": 26.96}, "v2": {"blancos": 4808, "negros": 14385, "ha": 192.32, "km2": 1.923, "pct": 25.05}}, "v2_6b_large": {"v1": {"blancos": 3132, "negros": 16616, "ha": 125.28, "km2": 1.253, "pct": 15.86}, "v2": {"blancos": 2627, "negros": 16566, "ha": 105.08, "km2": 1.051, "pct": 13.69}}, "unet_4b": {"v1": {"blancos": 5317, "negros": 14431, "ha": 212.68, "km2": 2.127, "pct": 26.92}, "v2": {"blancos": 4885, "negros": 14308, "ha": 195.4, "km2": 1.954, "pct": 25.45}}}}, {"nombre": "S2A_MSIL2A_20240803T144731_N0511_R139_T19LCD_20240803T214850.SAFE", "fecha": "20240803", "fecha_fmt": "2024-08-03", "year": 2024, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 3324, "negros": 16424, "ha": 132.96, "km2": 1.33, "pct": 16.83}, "v2": {"blancos": 2834, "negros": 16359, "ha": 113.36, "km2": 1.134, "pct": 14.77}}, "v2_4b_base": {"v1": {"blancos": 6967, "negros": 12781, "ha": 278.68, "km2": 2.787, "pct": 35.28}, "v2": {"blancos": 6423, "negros": 12770, "ha": 256.92, "km2": 2.569, "pct": 33.47}}, "v3_4b_large": {"v1": {"blancos": 5546, "negros": 14202, "ha": 221.84, "km2": 2.218, "pct": 28.08}, "v2": {"blancos": 5010, "negros": 14183, "ha": 200.4, "km2": 2.004, "pct": 26.1}}, "v2_6b_large": {"v1": {"blancos": 3344, "negros": 16404, "ha": 133.76, "km2": 1.338, "pct": 16.93}, "v2": {"blancos": 2848, "negros": 16345, "ha": 113.92, "km2": 1.139, "pct": 14.84}}, "unet_4b": {"v1": {"blancos": 7048, "negros": 12700, "ha": 281.92, "km2": 2.819, "pct": 35.69}, "v2": {"blancos": 6561, "negros": 12632, "ha": 262.44, "km2": 2.624, "pct": 34.18}}}}, {"nombre": "S2B_MSIL2A_20240808T144739_N0511_R139_T19LCD_20240808T183634.SAFE", "fecha": "20240808", "fecha_fmt": "2024-08-08", "year": 2024, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 2467, "negros": 17281, "ha": 98.68, "km2": 0.987, "pct": 12.49}, "v2": {"blancos": 2026, "negros": 17167, "ha": 81.04, "km2": 0.81, "pct": 10.56}}, "v2_4b_base": {"v1": {"blancos": 4941, "negros": 14807, "ha": 197.64, "km2": 1.976, "pct": 25.02}, "v2": {"blancos": 4477, "negros": 14716, "ha": 179.08, "km2": 1.791, "pct": 23.33}}, "v3_4b_large": {"v1": {"blancos": 3599, "negros": 16149, "ha": 143.96, "km2": 1.44, "pct": 18.22}, "v2": {"blancos": 3081, "negros": 16112, "ha": 123.24, "km2": 1.232, "pct": 16.05}}, "v2_6b_large": {"v1": {"blancos": 2460, "negros": 17288, "ha": 98.4, "km2": 0.984, "pct": 12.46}, "v2": {"blancos": 2018, "negros": 17175, "ha": 80.72, "km2": 0.807, "pct": 10.51}}, "unet_4b": {"v1": {"blancos": 5200, "negros": 14548, "ha": 208.0, "km2": 2.08, "pct": 26.33}, "v2": {"blancos": 4752, "negros": 14441, "ha": 190.08, "km2": 1.901, "pct": 24.76}}}}, {"nombre": "S2A_MSIL2A_20240813T144731_N0511_R139_T19LCD_20240813T210857.SAFE", "fecha": "20240813", "fecha_fmt": "2024-08-13", "year": 2024, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 3207, "negros": 16541, "ha": 128.28, "km2": 1.283, "pct": 16.24}, "v2": {"blancos": 2705, "negros": 16488, "ha": 108.2, "km2": 1.082, "pct": 14.09}}, "v2_4b_base": {"v1": {"blancos": 5586, "negros": 14162, "ha": 223.44, "km2": 2.234, "pct": 28.29}, "v2": {"blancos": 5062, "negros": 14131, "ha": 202.48, "km2": 2.025, "pct": 26.37}}, "v3_4b_large": {"v1": {"blancos": 4521, "negros": 15227, "ha": 180.84, "km2": 1.808, "pct": 22.89}, "v2": {"blancos": 4000, "negros": 15193, "ha": 160.0, "km2": 1.6, "pct": 20.84}}, "v2_6b_large": {"v1": {"blancos": 3191, "negros": 16557, "ha": 127.64, "km2": 1.276, "pct": 16.16}, "v2": {"blancos": 2682, "negros": 16511, "ha": 107.28, "km2": 1.073, "pct": 13.97}}, "unet_4b": {"v1": {"blancos": 5411, "negros": 14337, "ha": 216.44, "km2": 2.164, "pct": 27.4}, "v2": {"blancos": 4916, "negros": 14277, "ha": 196.64, "km2": 1.966, "pct": 25.61}}}}, {"nombre": "S2B_MSIL2A_20240818T144729_N0511_R139_T19LCD_20240818T183805.SAFE", "fecha": "20240818", "fecha_fmt": "2024-08-18", "year": 2024, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 3311, "negros": 16437, "ha": 132.44, "km2": 1.324, "pct": 16.77}, "v2": {"blancos": 2835, "negros": 16358, "ha": 113.4, "km2": 1.134, "pct": 14.77}}, "v2_4b_base": {"v1": {"blancos": 6116, "negros": 13632, "ha": 244.64, "km2": 2.446, "pct": 30.97}, "v2": {"blancos": 5619, "negros": 13574, "ha": 224.76, "km2": 2.248, "pct": 29.28}}, "v3_4b_large": {"v1": {"blancos": 4846, "negros": 14902, "ha": 193.84, "km2": 1.938, "pct": 24.54}, "v2": {"blancos": 4349, "negros": 14844, "ha": 173.96, "km2": 1.74, "pct": 22.66}}, "v2_6b_large": {"v1": {"blancos": 3320, "negros": 16428, "ha": 132.8, "km2": 1.328, "pct": 16.81}, "v2": {"blancos": 2839, "negros": 16354, "ha": 113.56, "km2": 1.136, "pct": 14.79}}, "unet_4b": {"v1": {"blancos": 5323, "negros": 14425, "ha": 212.92, "km2": 2.129, "pct": 26.95}, "v2": {"blancos": 4883, "negros": 14310, "ha": 195.32, "km2": 1.953, "pct": 25.44}}}}, {"nombre": "S2A_MSIL2A_20240823T144731_N0511_R139_T19LCD_20240823T215907.SAFE", "fecha": "20240823", "fecha_fmt": "2024-08-23", "year": 2024, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 4176, "negros": 15572, "ha": 167.04, "km2": 1.67, "pct": 21.15}, "v2": {"blancos": 3676, "negros": 15517, "ha": 147.04, "km2": 1.47, "pct": 19.15}}, "v2_4b_base": {"v1": {"blancos": 6898, "negros": 12850, "ha": 275.92, "km2": 2.759, "pct": 34.93}, "v2": {"blancos": 6364, "negros": 12829, "ha": 254.56, "km2": 2.546, "pct": 33.16}}, "v3_4b_large": {"v1": {"blancos": 5371, "negros": 14377, "ha": 214.84, "km2": 2.148, "pct": 27.2}, "v2": {"blancos": 4865, "negros": 14328, "ha": 194.6, "km2": 1.946, "pct": 25.35}}, "v2_6b_large": {"v1": {"blancos": 4196, "negros": 15552, "ha": 167.84, "km2": 1.678, "pct": 21.25}, "v2": {"blancos": 3695, "negros": 15498, "ha": 147.8, "km2": 1.478, "pct": 19.25}}, "unet_4b": {"v1": {"blancos": 6381, "negros": 13367, "ha": 255.24, "km2": 2.552, "pct": 32.31}, "v2": {"blancos": 5929, "negros": 13264, "ha": 237.16, "km2": 2.372, "pct": 30.89}}}}, {"nombre": "S2B_MSIL2A_20240828T144729_N0511_R139_T19LCD_20240828T183835.SAFE", "fecha": "20240828", "fecha_fmt": "2024-08-28", "year": 2024, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 4169, "negros": 15579, "ha": 166.76, "km2": 1.668, "pct": 21.11}, "v2": {"blancos": 3690, "negros": 15503, "ha": 147.6, "km2": 1.476, "pct": 19.23}}, "v2_4b_base": {"v1": {"blancos": 7152, "negros": 12596, "ha": 286.08, "km2": 2.861, "pct": 36.22}, "v2": {"blancos": 6614, "negros": 12579, "ha": 264.56, "km2": 2.646, "pct": 34.46}}, "v3_4b_large": {"v1": {"blancos": 5909, "negros": 13839, "ha": 236.36, "km2": 2.364, "pct": 29.92}, "v2": {"blancos": 5384, "negros": 13809, "ha": 215.36, "km2": 2.154, "pct": 28.05}}, "v2_6b_large": {"v1": {"blancos": 4179, "negros": 15569, "ha": 167.16, "km2": 1.672, "pct": 21.16}, "v2": {"blancos": 3698, "negros": 15495, "ha": 147.92, "km2": 1.479, "pct": 19.27}}, "unet_4b": {"v1": {"blancos": 5925, "negros": 13823, "ha": 237.0, "km2": 2.37, "pct": 30.0}, "v2": {"blancos": 5460, "negros": 13733, "ha": 218.4, "km2": 2.184, "pct": 28.45}}}}, {"nombre": "S2B_MSIL2A_20250704T144739_N0511_R139_T19LCD_20250704T182445.SAFE", "fecha": "20250704", "fecha_fmt": "2025-07-04", "year": 2025, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 1737, "negros": 18011, "ha": 69.48, "km2": 0.695, "pct": 8.8}, "v2": {"blancos": 1308, "negros": 17885, "ha": 52.32, "km2": 0.523, "pct": 6.81}}, "v2_4b_base": {"v1": {"blancos": 2112, "negros": 17636, "ha": 84.48, "km2": 0.845, "pct": 10.69}, "v2": {"blancos": 1651, "negros": 17542, "ha": 66.04, "km2": 0.66, "pct": 8.6}}, "v3_4b_large": {"v1": {"blancos": 2086, "negros": 17662, "ha": 83.44, "km2": 0.834, "pct": 10.56}, "v2": {"blancos": 1619, "negros": 17574, "ha": 64.76, "km2": 0.648, "pct": 8.44}}, "v2_6b_large": {"v1": {"blancos": 1747, "negros": 18001, "ha": 69.88, "km2": 0.699, "pct": 8.85}, "v2": {"blancos": 1313, "negros": 17880, "ha": 52.52, "km2": 0.525, "pct": 6.84}}, "unet_4b": {"v1": {"blancos": 2077, "negros": 17671, "ha": 83.08, "km2": 0.831, "pct": 10.52}, "v2": {"blancos": 1614, "negros": 17579, "ha": 64.56, "km2": 0.646, "pct": 8.41}}}}, {"nombre": "S2C_MSIL2A_20250709T144751_N0511_R139_T19LCD_20250709T194913.SAFE", "fecha": "20250709", "fecha_fmt": "2025-07-09", "year": 2025, "month": 7, "sat": "S2C", "datos": {"gt": {"v1": {"blancos": 2036, "negros": 17712, "ha": 81.44, "km2": 0.814, "pct": 10.31}, "v2": {"blancos": 1573, "negros": 17620, "ha": 62.92, "km2": 0.629, "pct": 8.2}}, "v2_4b_base": {"v1": {"blancos": 2257, "negros": 17491, "ha": 90.28, "km2": 0.903, "pct": 11.43}, "v2": {"blancos": 1787, "negros": 17406, "ha": 71.48, "km2": 0.715, "pct": 9.31}}, "v3_4b_large": {"v1": {"blancos": 2154, "negros": 17594, "ha": 86.16, "km2": 0.862, "pct": 10.91}, "v2": {"blancos": 1684, "negros": 17509, "ha": 67.36, "km2": 0.674, "pct": 8.77}}, "v2_6b_large": {"v1": {"blancos": 2040, "negros": 17708, "ha": 81.6, "km2": 0.816, "pct": 10.33}, "v2": {"blancos": 1577, "negros": 17616, "ha": 63.08, "km2": 0.631, "pct": 8.22}}, "unet_4b": {"v1": {"blancos": 2201, "negros": 17547, "ha": 88.04, "km2": 0.88, "pct": 11.15}, "v2": {"blancos": 1733, "negros": 17460, "ha": 69.32, "km2": 0.693, "pct": 9.03}}}}, {"nombre": "S2A_MSIL2A_20250711T144751_N0511_R139_T19LCD_20250711T214314.SAFE", "fecha": "20250711", "fecha_fmt": "2025-07-11", "year": 2025, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 1982, "negros": 17766, "ha": 79.28, "km2": 0.793, "pct": 10.04}, "v2": {"blancos": 1509, "negros": 17684, "ha": 60.36, "km2": 0.604, "pct": 7.86}}, "v2_4b_base": {"v1": {"blancos": 2324, "negros": 17424, "ha": 92.96, "km2": 0.93, "pct": 11.77}, "v2": {"blancos": 1853, "negros": 17340, "ha": 74.12, "km2": 0.741, "pct": 9.65}}, "v3_4b_large": {"v1": {"blancos": 2207, "negros": 17541, "ha": 88.28, "km2": 0.883, "pct": 11.18}, "v2": {"blancos": 1735, "negros": 17458, "ha": 69.4, "km2": 0.694, "pct": 9.04}}, "v2_6b_large": {"v1": {"blancos": 1971, "negros": 17777, "ha": 78.84, "km2": 0.788, "pct": 9.98}, "v2": {"blancos": 1502, "negros": 17691, "ha": 60.08, "km2": 0.601, "pct": 7.83}}, "unet_4b": {"v1": {"blancos": 2249, "negros": 17499, "ha": 89.96, "km2": 0.9, "pct": 11.39}, "v2": {"blancos": 1779, "negros": 17414, "ha": 71.16, "km2": 0.712, "pct": 9.27}}}}, {"nombre": "S2B_MSIL2A_20250714T144739_N0511_R139_T19LCD_20250714T183550.SAFE", "fecha": "20250714", "fecha_fmt": "2025-07-14", "year": 2025, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 1853, "negros": 17895, "ha": 74.12, "km2": 0.741, "pct": 9.38}, "v2": {"blancos": 1412, "negros": 17781, "ha": 56.48, "km2": 0.565, "pct": 7.36}}, "v2_4b_base": {"v1": {"blancos": 2291, "negros": 17457, "ha": 91.64, "km2": 0.916, "pct": 11.6}, "v2": {"blancos": 1813, "negros": 17380, "ha": 72.52, "km2": 0.725, "pct": 9.45}}, "v3_4b_large": {"v1": {"blancos": 2220, "negros": 17528, "ha": 88.8, "km2": 0.888, "pct": 11.24}, "v2": {"blancos": 1744, "negros": 17449, "ha": 69.76, "km2": 0.698, "pct": 9.09}}, "v2_6b_large": {"v1": {"blancos": 1863, "negros": 17885, "ha": 74.52, "km2": 0.745, "pct": 9.43}, "v2": {"blancos": 1419, "negros": 17774, "ha": 56.76, "km2": 0.568, "pct": 7.39}}, "unet_4b": {"v1": {"blancos": 2189, "negros": 17559, "ha": 87.56, "km2": 0.876, "pct": 11.08}, "v2": {"blancos": 1712, "negros": 17481, "ha": 68.48, "km2": 0.685, "pct": 8.92}}}}, {"nombre": "S2A_MSIL2A_20250721T144801_N0511_R139_T19LCD_20250722T000314.SAFE", "fecha": "20250721", "fecha_fmt": "2025-07-21", "year": 2025, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2125, "negros": 17623, "ha": 85.0, "km2": 0.85, "pct": 10.76}, "v2": {"blancos": 1649, "negros": 17544, "ha": 65.96, "km2": 0.66, "pct": 8.59}}, "v2_4b_base": {"v1": {"blancos": 2312, "negros": 17436, "ha": 92.48, "km2": 0.925, "pct": 11.71}, "v2": {"blancos": 1832, "negros": 17361, "ha": 73.28, "km2": 0.733, "pct": 9.55}}, "v3_4b_large": {"v1": {"blancos": 2217, "negros": 17531, "ha": 88.68, "km2": 0.887, "pct": 11.23}, "v2": {"blancos": 1741, "negros": 17452, "ha": 69.64, "km2": 0.696, "pct": 9.07}}, "v2_6b_large": {"v1": {"blancos": 2116, "negros": 17632, "ha": 84.64, "km2": 0.846, "pct": 10.72}, "v2": {"blancos": 1642, "negros": 17551, "ha": 65.68, "km2": 0.657, "pct": 8.56}}, "unet_4b": {"v1": {"blancos": 2308, "negros": 17440, "ha": 92.32, "km2": 0.923, "pct": 11.69}, "v2": {"blancos": 1831, "negros": 17362, "ha": 73.24, "km2": 0.732, "pct": 9.54}}}}, {"nombre": "S2B_MSIL2A_20250724T144729_N0511_R139_T19LCD_20250724T183022.SAFE", "fecha": "20250724", "fecha_fmt": "2025-07-24", "year": 2025, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 1905, "negros": 17843, "ha": 76.2, "km2": 0.762, "pct": 9.65}, "v2": {"blancos": 1456, "negros": 17737, "ha": 58.24, "km2": 0.582, "pct": 7.59}}, "v2_4b_base": {"v1": {"blancos": 2347, "negros": 17401, "ha": 93.88, "km2": 0.939, "pct": 11.88}, "v2": {"blancos": 1866, "negros": 17327, "ha": 74.64, "km2": 0.746, "pct": 9.72}}, "v3_4b_large": {"v1": {"blancos": 2310, "negros": 17438, "ha": 92.4, "km2": 0.924, "pct": 11.7}, "v2": {"blancos": 1830, "negros": 17363, "ha": 73.2, "km2": 0.732, "pct": 9.53}}, "v2_6b_large": {"v1": {"blancos": 1892, "negros": 17856, "ha": 75.68, "km2": 0.757, "pct": 9.58}, "v2": {"blancos": 1442, "negros": 17751, "ha": 57.68, "km2": 0.577, "pct": 7.51}}, "unet_4b": {"v1": {"blancos": 2254, "negros": 17494, "ha": 90.16, "km2": 0.902, "pct": 11.41}, "v2": {"blancos": 1772, "negros": 17421, "ha": 70.88, "km2": 0.709, "pct": 9.23}}}}, {"nombre": "S2B_MSIL2A_20250803T144729_N0511_R139_T19LCD_20250803T182243.SAFE", "fecha": "20250803", "fecha_fmt": "2025-08-03", "year": 2025, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 1962, "negros": 17786, "ha": 78.48, "km2": 0.785, "pct": 9.94}, "v2": {"blancos": 1509, "negros": 17684, "ha": 60.36, "km2": 0.604, "pct": 7.86}}, "v2_4b_base": {"v1": {"blancos": 2554, "negros": 17194, "ha": 102.16, "km2": 1.022, "pct": 12.93}, "v2": {"blancos": 2064, "negros": 17129, "ha": 82.56, "km2": 0.826, "pct": 10.75}}, "v3_4b_large": {"v1": {"blancos": 2467, "negros": 17281, "ha": 98.68, "km2": 0.987, "pct": 12.49}, "v2": {"blancos": 1981, "negros": 17212, "ha": 79.24, "km2": 0.792, "pct": 10.32}}, "v2_6b_large": {"v1": {"blancos": 1948, "negros": 17800, "ha": 77.92, "km2": 0.779, "pct": 9.86}, "v2": {"blancos": 1492, "negros": 17701, "ha": 59.68, "km2": 0.597, "pct": 7.77}}, "unet_4b": {"v1": {"blancos": 2390, "negros": 17358, "ha": 95.6, "km2": 0.956, "pct": 12.1}, "v2": {"blancos": 1894, "negros": 17299, "ha": 75.76, "km2": 0.758, "pct": 9.87}}}}, {"nombre": "S2C_MSIL2A_20250808T144751_N0511_R139_T19LCD_20250808T195004.SAFE", "fecha": "20250808", "fecha_fmt": "2025-08-08", "year": 2025, "month": 8, "sat": "S2C", "datos": {"gt": {"v1": {"blancos": 2383, "negros": 17365, "ha": 95.32, "km2": 0.953, "pct": 12.07}, "v2": {"blancos": 1884, "negros": 17309, "ha": 75.36, "km2": 0.754, "pct": 9.82}}, "v2_4b_base": {"v1": {"blancos": 2712, "negros": 17036, "ha": 108.48, "km2": 1.085, "pct": 13.73}, "v2": {"blancos": 2214, "negros": 16979, "ha": 88.56, "km2": 0.886, "pct": 11.54}}, "v3_4b_large": {"v1": {"blancos": 2537, "negros": 17211, "ha": 101.48, "km2": 1.015, "pct": 12.85}, "v2": {"blancos": 2051, "negros": 17142, "ha": 82.04, "km2": 0.82, "pct": 10.69}}, "v2_6b_large": {"v1": {"blancos": 2373, "negros": 17375, "ha": 94.92, "km2": 0.949, "pct": 12.02}, "v2": {"blancos": 1872, "negros": 17321, "ha": 74.88, "km2": 0.749, "pct": 9.75}}, "unet_4b": {"v1": {"blancos": 2552, "negros": 17196, "ha": 102.08, "km2": 1.021, "pct": 12.92}, "v2": {"blancos": 2059, "negros": 17134, "ha": 82.36, "km2": 0.824, "pct": 10.73}}}}, {"nombre": "S2A_MSIL2A_20250810T144751_N0511_R139_T19LCD_20250810T205212.SAFE", "fecha": "20250810", "fecha_fmt": "2025-08-10", "year": 2025, "month": 8, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 2524, "negros": 17224, "ha": 100.96, "km2": 1.01, "pct": 12.78}, "v2": {"blancos": 2024, "negros": 17169, "ha": 80.96, "km2": 0.81, "pct": 10.55}}, "v2_4b_base": {"v1": {"blancos": 2637, "negros": 17111, "ha": 105.48, "km2": 1.055, "pct": 13.35}, "v2": {"blancos": 2142, "negros": 17051, "ha": 85.68, "km2": 0.857, "pct": 11.16}}, "v3_4b_large": {"v1": {"blancos": 2547, "negros": 17201, "ha": 101.88, "km2": 1.019, "pct": 12.9}, "v2": {"blancos": 2067, "negros": 17126, "ha": 82.68, "km2": 0.827, "pct": 10.77}}, "v2_6b_large": {"v1": {"blancos": 2522, "negros": 17226, "ha": 100.88, "km2": 1.009, "pct": 12.77}, "v2": {"blancos": 2026, "negros": 17167, "ha": 81.04, "km2": 0.81, "pct": 10.56}}, "unet_4b": {"v1": {"blancos": 2626, "negros": 17122, "ha": 105.04, "km2": 1.05, "pct": 13.3}, "v2": {"blancos": 2129, "negros": 17064, "ha": 85.16, "km2": 0.852, "pct": 11.09}}}}, {"nombre": "S2B_MSIL2A_20250813T144729_N0511_R139_T19LCD_20250813T182742.SAFE", "fecha": "20250813", "fecha_fmt": "2025-08-13", "year": 2025, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 2193, "negros": 17555, "ha": 87.72, "km2": 0.877, "pct": 11.1}, "v2": {"blancos": 1721, "negros": 17472, "ha": 68.84, "km2": 0.688, "pct": 8.97}}, "v2_4b_base": {"v1": {"blancos": 2745, "negros": 17003, "ha": 109.8, "km2": 1.098, "pct": 13.9}, "v2": {"blancos": 2246, "negros": 16947, "ha": 89.84, "km2": 0.898, "pct": 11.7}}, "v3_4b_large": {"v1": {"blancos": 2586, "negros": 17162, "ha": 103.44, "km2": 1.034, "pct": 13.09}, "v2": {"blancos": 2103, "negros": 17090, "ha": 84.12, "km2": 0.841, "pct": 10.96}}, "v2_6b_large": {"v1": {"blancos": 2179, "negros": 17569, "ha": 87.16, "km2": 0.872, "pct": 11.03}, "v2": {"blancos": 1704, "negros": 17489, "ha": 68.16, "km2": 0.682, "pct": 8.88}}, "unet_4b": {"v1": {"blancos": 2587, "negros": 17161, "ha": 103.48, "km2": 1.035, "pct": 13.1}, "v2": {"blancos": 2085, "negros": 17108, "ha": 83.4, "km2": 0.834, "pct": 10.86}}}}, {"nombre": "S2A_MSIL2A_20260706T144751_N0512_R139_T19LCD_20260707T002012.SAFE", "fecha": "20260706", "fecha_fmt": "2026-07-06", "year": 2026, "month": 7, "sat": "S2A", "datos": {"gt": {"v1": {"blancos": 5290, "negros": 14458, "ha": 211.6, "km2": 2.116, "pct": 26.79}, "v2": {"blancos": 4775, "negros": 14418, "ha": 191.0, "km2": 1.91, "pct": 24.88}}, "v2_4b_base": {"v1": {"blancos": 5961, "negros": 13787, "ha": 238.44, "km2": 2.384, "pct": 30.19}, "v2": {"blancos": 5407, "negros": 13786, "ha": 216.28, "km2": 2.163, "pct": 28.17}}, "v3_4b_large": {"v1": {"blancos": 4281, "negros": 15467, "ha": 171.24, "km2": 1.712, "pct": 21.68}, "v2": {"blancos": 3751, "negros": 15442, "ha": 150.04, "km2": 1.5, "pct": 19.54}}, "v2_6b_large": {"v1": {"blancos": 5336, "negros": 14412, "ha": 213.44, "km2": 2.134, "pct": 27.02}, "v2": {"blancos": 4823, "negros": 14370, "ha": 192.92, "km2": 1.929, "pct": 25.13}}, "unet_4b": {"v1": {"blancos": 7122, "negros": 12626, "ha": 284.88, "km2": 2.849, "pct": 36.06}, "v2": {"blancos": 6573, "negros": 12620, "ha": 262.92, "km2": 2.629, "pct": 34.25}}}}, {"nombre": "S2B_MSIL2A_20260709T144729_N0512_R139_T19LCD_20260709T181441.SAFE", "fecha": "20260709", "fecha_fmt": "2026-07-09", "year": 2026, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 4354, "negros": 15394, "ha": 174.16, "km2": 1.742, "pct": 22.05}, "v2": {"blancos": 3918, "negros": 15275, "ha": 156.72, "km2": 1.567, "pct": 20.41}}, "v2_4b_base": {"v1": {"blancos": 7391, "negros": 12357, "ha": 295.64, "km2": 2.956, "pct": 37.43}, "v2": {"blancos": 6836, "negros": 12357, "ha": 273.44, "km2": 2.734, "pct": 35.62}}, "v3_4b_large": {"v1": {"blancos": 5423, "negros": 14325, "ha": 216.92, "km2": 2.169, "pct": 27.46}, "v2": {"blancos": 4916, "negros": 14277, "ha": 196.64, "km2": 1.966, "pct": 25.61}}, "v2_6b_large": {"v1": {"blancos": 4391, "negros": 15357, "ha": 175.64, "km2": 1.756, "pct": 22.24}, "v2": {"blancos": 3949, "negros": 15244, "ha": 157.96, "km2": 1.58, "pct": 20.58}}, "unet_4b": {"v1": {"blancos": 6730, "negros": 13018, "ha": 269.2, "km2": 2.692, "pct": 34.08}, "v2": {"blancos": 6205, "negros": 12988, "ha": 248.2, "km2": 2.482, "pct": 32.33}}}}, {"nombre": "S2C_MSIL2A_20260714T144731_N0512_R139_T19LCD_20260714T175113.SAFE", "fecha": "20260714", "fecha_fmt": "2026-07-14", "year": 2026, "month": 7, "sat": "S2C", "datos": {"gt": {"v1": {"blancos": 7057, "negros": 12691, "ha": 282.28, "km2": 2.823, "pct": 35.74}, "v2": {"blancos": 6518, "negros": 12675, "ha": 260.72, "km2": 2.607, "pct": 33.96}}, "v2_4b_base": {"v1": {"blancos": 7935, "negros": 11813, "ha": 317.4, "km2": 3.174, "pct": 40.18}, "v2": {"blancos": 7380, "negros": 11813, "ha": 295.2, "km2": 2.952, "pct": 38.45}}, "v3_4b_large": {"v1": {"blancos": 7443, "negros": 12305, "ha": 297.72, "km2": 2.977, "pct": 37.69}, "v2": {"blancos": 6928, "negros": 12265, "ha": 277.12, "km2": 2.771, "pct": 36.1}}, "v2_6b_large": {"v1": {"blancos": 7161, "negros": 12587, "ha": 286.44, "km2": 2.864, "pct": 36.26}, "v2": {"blancos": 6618, "negros": 12575, "ha": 264.72, "km2": 2.647, "pct": 34.48}}, "unet_4b": {"v1": {"blancos": 7547, "negros": 12201, "ha": 301.88, "km2": 3.019, "pct": 38.22}, "v2": {"blancos": 7007, "negros": 12186, "ha": 280.28, "km2": 2.803, "pct": 36.51}}}}, {"nombre": "S2B_MSIL2A_20260719T144729_N0512_R139_T19LCD_20260720T233347.SAFE", "fecha": "20260719", "fecha_fmt": "2026-07-19", "year": 2026, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 5234, "negros": 14514, "ha": 209.36, "km2": 2.094, "pct": 26.5}, "v2": {"blancos": 4821, "negros": 14372, "ha": 192.84, "km2": 1.928, "pct": 25.12}}, "v2_4b_base": {"v1": {"blancos": 9207, "negros": 10541, "ha": 368.28, "km2": 3.683, "pct": 46.62}, "v2": {"blancos": 8658, "negros": 10535, "ha": 346.32, "km2": 3.463, "pct": 45.11}}, "v3_4b_large": {"v1": {"blancos": 8334, "negros": 11414, "ha": 333.36, "km2": 3.334, "pct": 42.2}, "v2": {"blancos": 7854, "negros": 11339, "ha": 314.16, "km2": 3.142, "pct": 40.92}}, "v2_6b_large": {"v1": {"blancos": 5249, "negros": 14499, "ha": 209.96, "km2": 2.1, "pct": 26.58}, "v2": {"blancos": 4830, "negros": 14363, "ha": 193.2, "km2": 1.932, "pct": 25.17}}, "unet_4b": {"v1": {"blancos": 6868, "negros": 12880, "ha": 274.72, "km2": 2.747, "pct": 34.78}, "v2": {"blancos": 6352, "negros": 12841, "ha": 254.08, "km2": 2.541, "pct": 33.1}}}}, {"nombre": "S2C_MSIL2A_20260724T144731_N0512_R139_T19LCD_20260724T174753.SAFE", "fecha": "20260724", "fecha_fmt": "2026-07-24", "year": 2026, "month": 7, "sat": "S2C", "datos": {"gt": {"v1": {"blancos": 6901, "negros": 12847, "ha": 276.04, "km2": 2.76, "pct": 34.95}, "v2": {"blancos": 6377, "negros": 12816, "ha": 255.08, "km2": 2.551, "pct": 33.23}}, "v2_4b_base": {"v1": {"blancos": 9334, "negros": 10414, "ha": 373.36, "km2": 3.734, "pct": 47.27}, "v2": {"blancos": 8779, "negros": 10414, "ha": 351.16, "km2": 3.512, "pct": 45.74}}, "v3_4b_large": {"v1": {"blancos": 8109, "negros": 11639, "ha": 324.36, "km2": 3.244, "pct": 41.06}, "v2": {"blancos": 7654, "negros": 11539, "ha": 306.16, "km2": 3.062, "pct": 39.88}}, "v2_6b_large": {"v1": {"blancos": 6949, "negros": 12799, "ha": 277.96, "km2": 2.78, "pct": 35.19}, "v2": {"blancos": 6425, "negros": 12768, "ha": 257.0, "km2": 2.57, "pct": 33.48}}, "unet_4b": {"v1": {"blancos": 7242, "negros": 12506, "ha": 289.68, "km2": 2.897, "pct": 36.67}, "v2": {"blancos": 6712, "negros": 12481, "ha": 268.48, "km2": 2.685, "pct": 34.97}}}}, {"nombre": "S2B_MSIL2A_20260729T144729_N0512_R139_T19LCD_20260729T182426.SAFE", "fecha": "20260729", "fecha_fmt": "2026-07-29", "year": 2026, "month": 7, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 5418, "negros": 14330, "ha": 216.72, "km2": 2.167, "pct": 27.44}, "v2": {"blancos": 5004, "negros": 14189, "ha": 200.16, "km2": 2.002, "pct": 26.07}}, "v2_4b_base": {"v1": {"blancos": 8559, "negros": 11189, "ha": 342.36, "km2": 3.424, "pct": 43.34}, "v2": {"blancos": 8027, "negros": 11166, "ha": 321.08, "km2": 3.211, "pct": 41.82}}, "v3_4b_large": {"v1": {"blancos": 7853, "negros": 11895, "ha": 314.12, "km2": 3.141, "pct": 39.77}, "v2": {"blancos": 7425, "negros": 11768, "ha": 297.0, "km2": 2.97, "pct": 38.69}}, "v2_6b_large": {"v1": {"blancos": 5449, "negros": 14299, "ha": 217.96, "km2": 2.18, "pct": 27.59}, "v2": {"blancos": 5030, "negros": 14163, "ha": 201.2, "km2": 2.012, "pct": 26.21}}, "unet_4b": {"v1": {"blancos": 6586, "negros": 13162, "ha": 263.44, "km2": 2.634, "pct": 33.35}, "v2": {"blancos": 6105, "negros": 13088, "ha": 244.2, "km2": 2.442, "pct": 31.81}}}}, {"nombre": "S2C_MSIL2A_20260803T144731_N0512_R139_T19LCD_20260803T194010.SAFE", "fecha": "20260803", "fecha_fmt": "2026-08-03", "year": 2026, "month": 8, "sat": "S2C", "datos": {"gt": {"v1": {"blancos": 7489, "negros": 12259, "ha": 299.56, "km2": 2.996, "pct": 37.92}, "v2": {"blancos": 6990, "negros": 12203, "ha": 279.6, "km2": 2.796, "pct": 36.42}}, "v2_4b_base": {"v1": {"blancos": 11304, "negros": 8444, "ha": 452.16, "km2": 4.522, "pct": 57.24}, "v2": {"blancos": 10757, "negros": 8436, "ha": 430.28, "km2": 4.303, "pct": 56.05}}, "v3_4b_large": {"v1": {"blancos": 12700, "negros": 7048, "ha": 508.0, "km2": 5.08, "pct": 64.31}, "v2": {"blancos": 12231, "negros": 6962, "ha": 489.24, "km2": 4.892, "pct": 63.73}}, "v2_6b_large": {"v1": {"blancos": 7514, "negros": 12234, "ha": 300.56, "km2": 3.006, "pct": 38.05}, "v2": {"blancos": 7010, "negros": 12183, "ha": 280.4, "km2": 2.804, "pct": 36.52}}, "unet_4b": {"v1": {"blancos": 6132, "negros": 13616, "ha": 245.28, "km2": 2.453, "pct": 31.05}, "v2": {"blancos": 5642, "negros": 13551, "ha": 225.68, "km2": 2.257, "pct": 29.4}}}}, {"nombre": "S2B_MSIL2A_20260808T144729_N0512_R139_T19LCD_20260808T181641.SAFE", "fecha": "20260808", "fecha_fmt": "2026-08-08", "year": 2026, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 5428, "negros": 14320, "ha": 217.12, "km2": 2.171, "pct": 27.49}, "v2": {"blancos": 5034, "negros": 14159, "ha": 201.36, "km2": 2.014, "pct": 26.23}}, "v2_4b_base": {"v1": {"blancos": 8442, "negros": 11306, "ha": 337.68, "km2": 3.377, "pct": 42.75}, "v2": {"blancos": 7924, "negros": 11269, "ha": 316.96, "km2": 3.17, "pct": 41.29}}, "v3_4b_large": {"v1": {"blancos": 7449, "negros": 12299, "ha": 297.96, "km2": 2.98, "pct": 37.72}, "v2": {"blancos": 7060, "negros": 12133, "ha": 282.4, "km2": 2.824, "pct": 36.78}}, "v2_6b_large": {"v1": {"blancos": 5465, "negros": 14283, "ha": 218.6, "km2": 2.186, "pct": 27.67}, "v2": {"blancos": 5066, "negros": 14127, "ha": 202.64, "km2": 2.026, "pct": 26.4}}, "unet_4b": {"v1": {"blancos": 4965, "negros": 14783, "ha": 198.6, "km2": 1.986, "pct": 25.14}, "v2": {"blancos": 4539, "negros": 14654, "ha": 181.56, "km2": 1.816, "pct": 23.65}}}}, {"nombre": "S2C_MSIL2A_20260813T144731_N0512_R139_T19LCD_20260813T194316.SAFE", "fecha": "20260813", "fecha_fmt": "2026-08-13", "year": 2026, "month": 8, "sat": "S2C", "datos": {"gt": {"v1": {"blancos": 6886, "negros": 12862, "ha": 275.44, "km2": 2.754, "pct": 34.87}, "v2": {"blancos": 6379, "negros": 12814, "ha": 255.16, "km2": 2.552, "pct": 33.24}}, "v2_4b_base": {"v1": {"blancos": 8510, "negros": 11238, "ha": 340.4, "km2": 3.404, "pct": 43.09}, "v2": {"blancos": 7986, "negros": 11207, "ha": 319.44, "km2": 3.194, "pct": 41.61}}, "v3_4b_large": {"v1": {"blancos": 7988, "negros": 11760, "ha": 319.52, "km2": 3.195, "pct": 40.45}, "v2": {"blancos": 7604, "negros": 11589, "ha": 304.16, "km2": 3.042, "pct": 39.62}}, "v2_6b_large": {"v1": {"blancos": 6910, "negros": 12838, "ha": 276.4, "km2": 2.764, "pct": 34.99}, "v2": {"blancos": 6405, "negros": 12788, "ha": 256.2, "km2": 2.562, "pct": 33.37}}, "unet_4b": {"v1": {"blancos": 5405, "negros": 14343, "ha": 216.2, "km2": 2.162, "pct": 27.37}, "v2": {"blancos": 4980, "negros": 14213, "ha": 199.2, "km2": 1.992, "pct": 25.95}}}}, {"nombre": "S2B_MSIL2A_20260828T144729_N0512_R139_T19LCD_20260828T182359.SAFE", "fecha": "20260828", "fecha_fmt": "2026-08-28", "year": 2026, "month": 8, "sat": "S2B", "datos": {"gt": {"v1": {"blancos": 6266, "negros": 13482, "ha": 250.64, "km2": 2.506, "pct": 31.73}, "v2": {"blancos": 5862, "negros": 13331, "ha": 234.48, "km2": 2.345, "pct": 30.54}}, "v2_4b_base": {"v1": {"blancos": 10316, "negros": 9432, "ha": 412.64, "km2": 4.126, "pct": 52.24}, "v2": {"blancos": 9788, "negros": 9405, "ha": 391.52, "km2": 3.915, "pct": 51.0}}, "v3_4b_large": {"v1": {"blancos": 15946, "negros": 3802, "ha": 637.84, "km2": 6.378, "pct": 80.75}, "v2": {"blancos": 15470, "negros": 3723, "ha": 618.8, "km2": 6.188, "pct": 80.6}}, "v2_6b_large": {"v1": {"blancos": 6320, "negros": 13428, "ha": 252.8, "km2": 2.528, "pct": 32.0}, "v2": {"blancos": 5916, "negros": 13277, "ha": 236.64, "km2": 2.366, "pct": 30.82}}, "unet_4b": {"v1": {"blancos": 8224, "negros": 11524, "ha": 328.96, "km2": 3.29, "pct": 41.64}, "v2": {"blancos": 7776, "negros": 11417, "ha": 311.04, "km2": 3.11, "pct": 40.51}}}}];
+
+const MODEL_LABELS = {
+  'v3_4b_large': 'Salar-UNet V3 · 4B · Large (🏆 Propuesta Definitiva)',
+  'v2_4b_base': 'Salar-UNet V2 · 4B · Base (PROP-1)',
+  'v2_6b_large': 'Salar-UNet V2 · 6B · Large (PROP-2)',
+  'unet_4b': 'U-Net Clásica · 4B',
+  'gt': 'Ground Truth Biofísico (SI > 0.0771)'
+};
+
+let currentIdx = 0;
+let chart = null;
+let playInterval = null;
+let playSpeed = 600;
+
+function getVal(d, mod, reg, uni) {
+  const m = d.datos[mod] || {};
+  const r = m[reg] || { ha: 0, km2: 0, pct: 0, blancos: 0 };
+  if (uni === 'ha') return r.ha;
+  if (uni === 'km2') return r.km2;
+  if (uni === 'pct') return r.pct;
+  if (uni === 'px') return r.blancos;
+  return r.ha;
+}
+
+function getUnitLabel(uni) {
+  if (uni === 'ha') return 'ha';
+  if (uni === 'km2') return 'km²';
+  if (uni === 'pct') return '%';
+  if (uni === 'px') return 'px';
+  return 'ha';
+}
+
+function calcularRegresion(yVals) {
+  const n = DATA.length;
+  const xFrac = DATA.map(d => d.year + (d.month - 1)/12.0 + parseInt(d.fecha.substring(6,8))/365.0);
+  let sX=0, sY=0, sXY=0, sXX=0;
+  for (let i=0; i<n; i++) {
+    const x = xFrac[i], y = yVals[i];
+    sX += x; sY += y; sXY += x*y; sXX += x*x;
+  }
+  const slope = (n*sXY - sX*sY) / (n*sXX - sX*sX);
+  const intercept = (sY - slope*sX) / n;
+  const trendY = xFrac.map(x => slope*x + intercept);
+  return { slope, intercept, trendY };
+}
+
+function actualizarGrafica() {
+  const mod = document.getElementById('selModelo').value;
+  const reg = document.getElementById('selEscenario').value;
+  const uni = document.getElementById('selUnidad').value;
+  const unitLabel = getUnitLabel(uni);
+
+  const yVals = DATA.map(d => getVal(d, mod, reg, uni));
+  const gtVals = DATA.map(d => getVal(d, 'gt', reg, uni));
+
+  const { slope, trendY } = calcularRegresion(yVals);
+
+  // Actualizar KPIs
+  const kSlope = document.getElementById('kpiSlope');
+  const kDelta = document.getElementById('kpiDelta10');
+  const delta10 = slope * 10;
+  kSlope.textContent = `${slope >= 0 ? '+' : ''}${slope.toFixed(2)} ${unitLabel}/año`;
+  kDelta.textContent = `${delta10 >= 0 ? '+' : ''}${delta10.toFixed(1)} ${unitLabel} en 10a`;
+  kSlope.style.color = slope < 0 ? 'var(--er)' : 'var(--ok)';
+  kDelta.style.color = slope < 0 ? 'var(--er)' : 'var(--ok)';
+
+  const ver = document.getElementById('kpiVeredicto');
+  if (slope < -0.1) {
+    ver.textContent = '🔴 REDUCCIÓN CONFIRMADA';
+    ver.style.color = 'var(--er)';
+  } else if (slope > 0.1) {
+    ver.textContent = '🟢 EXPANSIÓN OBSERVADA';
+    ver.style.color = 'var(--ok)';
+  } else {
+    ver.textContent = '⚪ ESTABILIDAD';
+    ver.style.color = 'var(--mu)';
+  }
+
+  // Marcador del punto activo en el gráfico
+  const pointRadii = yVals.map((_, i) => i === currentIdx ? 8 : 2.5);
+  const pointBg = yVals.map((_, i) => i === currentIdx ? '#ffea00' : '#38bdf8');
+  const pointBorder = yVals.map((_, i) => i === currentIdx ? '#ffffff' : '#0284c7');
+  const pointBWidth = yVals.map((_, i) => i === currentIdx ? 3 : 1);
+
+  const ctx = document.getElementById('chEstiaje').getContext('2d');
+  if (chart) chart.destroy();
+
+  const datasets = [
+    {
+      label: `${MODEL_LABELS[mod] || mod} (${unitLabel})`,
+      data: yVals,
+      borderColor: '#38bdf8',
+      backgroundColor: 'rgba(56, 189, 248, 0.08)',
+      fill: true,
+      borderWidth: 2.2,
+      tension: 0.15,
+      pointRadius: pointRadii,
+      pointHoverRadius: 9,
+      pointBackgroundColor: pointBg,
+      pointBorderColor: pointBorder,
+      pointBorderWidth: pointBWidth
+    },
+    {
+      label: `Ground Truth Biofísico (${unitLabel})`,
+      data: gtVals,
+      borderColor: '#d29922',
+      borderDash: [4, 4],
+      borderWidth: 1.8,
+      tension: 0.15,
+      pointRadius: 2,
+      pointHoverRadius: 6,
+      pointBackgroundColor: '#d29922'
+    },
+    {
+      label: `Tendencia Secular (${slope >= 0 ? '+' : ''}${slope.toFixed(2)} ${unitLabel}/año)`,
+      data: trendY,
+      borderColor: '#f85149',
+      borderDash: [8, 4],
+      borderWidth: 2.2,
+      pointRadius: 0
+    }
+  ];
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: DATA.map(d => d.fecha_fmt),
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      onClick: (e, elements) => {
+        if (elements.length > 0) {
+          currentIdx = elements[0].index;
+          irAlIndice(currentIdx);
+        }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          labels: { color: '#cbd5e1', font: { family: 'Inter', weight: 'bold' } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#38bdf8',
+          bodyColor: '#e2e8f0',
+          borderColor: '#334155',
+          borderWidth: 1,
+          padding: 10
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', maxRotation: 45, autoSkip: true, maxTicksLimit: 22 },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
+        y: {
+          ticks: { color: '#94a3b8' },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          title: { display: true, text: `Área (${unitLabel})`, color: '#94a3b8', font: { weight: 'bold' } }
+        }
+      }
+    }
+  });
+}
+
+function actualizarVisor() {
+  const d = DATA[currentIdx];
+  if (!d) return;
+
+  const mod = document.getElementById('selModelo').value;
+  const reg = document.getElementById('selEscenario').value;
+  const estilo = document.getElementById('selEstilo').value;
+  const fcode = d.fecha;
+
+  // Actualizar slider
+  document.getElementById('timeSlider').value = currentIdx;
+
+  // Encabezado de fecha activa
+  document.getElementById('txtFechaPrincipal').textContent = `Fecha: ${d.fecha_fmt}`;
+  document.getElementById('txtSubFecha').textContent = `Toma ${currentIdx + 1} de ${DATA.length} · Satélite: ${d.sat} · Año ${d.year} · Ventana de Estiaje`;
+
+  // Imágenes
+  const suffix = (estilo === 'overlay') ? '_overlay.png' : '.png';
+  document.getElementById('imgVisorReal').src = `julio_agosto/img/salinas_${fcode}_rgb.png`;
+
+  // GT
+  const gtSuffix = (estilo === 'overlay') ? '_gt_overlay.png' : '_gt.png';
+  document.getElementById('imgVisorGT').src = `julio_agosto/img/salinas_${fcode}${gtSuffix}`;
+  document.getElementById('tagEstiloGT').textContent = (estilo === 'overlay') ? 'Overlay Ámbar' : 'B/N Puro';
+
+  // Modelo
+  const modId = (mod === 'gt') ? 'gt' : mod;
+  const modSuffix = (mod === 'gt') ? gtSuffix : `_${modId}${suffix}`;
+  document.getElementById('imgVisorPred').src = `julio_agosto/img/salinas_${fcode}${modSuffix}`;
+  document.getElementById('txtTituloPanelModelo').textContent = `🤖 ${MODEL_LABELS[mod] || mod}`;
+  document.getElementById('tagEstiloModelo').textContent = (estilo === 'overlay') ? 'Overlay Cyan' : 'B/N Puro';
+  document.getElementById('txtModeloNombreFoot').textContent = MODEL_LABELS[mod] || mod;
+
+  // Métricas
+  const dM = (d.datos[mod] || {})[reg] || { blancos: 0, negros: 0, ha: 0, km2: 0, pct: 0 };
+  const dG = (d.datos['gt'] || {})[reg] || { ha: 0, pct: 0 };
+  const dif = (dM.ha - dG.ha).toFixed(1);
+
+  document.getElementById('txtAreaGTFoot').textContent = `${dG.ha.toFixed(2)} ha (${dG.pct.toFixed(1)}%)`;
+  document.getElementById('txtAreaModeloFoot').textContent = `${dM.ha.toFixed(2)} ha (${dM.pct.toFixed(1)}%)`;
+
+  // Barra de métricas activa
+  document.getElementById('mbAreaModelo').textContent = `${dM.ha.toFixed(2)} ha (${dM.km2.toFixed(3)} km²)`;
+  document.getElementById('mbAreaGT').textContent = `${dG.ha.toFixed(2)} ha`;
+  const mbDif = document.getElementById('mbDif');
+  mbDif.textContent = `${dif >= 0 ? '+' : ''}${dif} ha`;
+  mbDif.style.color = Math.abs(dif) < 15 ? 'var(--ok)' : (Math.abs(dif) < 35 ? 'var(--wa)' : 'var(--er)');
+  document.getElementById('mbPct').textContent = `${dM.pct.toFixed(1)}% de la cubeta`;
+  document.getElementById('mbPixeles').textContent = `${dM.blancos.toLocaleString()} px salar / ${dM.negros.toLocaleString()} px fondo`;
+
+  // KPI Activa
+  const uni = document.getElementById('selUnidad').value;
+  const unitLabel = getUnitLabel(uni);
+  const valAct = getVal(d, mod, reg, uni);
+  document.getElementById('kpiActiva').textContent = `${valAct.toFixed(1)} ${unitLabel}`;
+  document.getElementById('kpiActivaSub').textContent = `Toma ${currentIdx + 1} (${d.fecha_fmt})`;
+
+  // Resaltar fila en la tabla
+  actualizarFilaActiva();
+
+  // Actualizar punto en el gráfico sin redibujar todo
+  if (chart) {
+    const yVals = DATA.map(item => getVal(item, mod, reg, uni));
+    chart.data.datasets[0].pointRadius = yVals.map((_, i) => i === currentIdx ? 9 : 2.5);
+    chart.data.datasets[0].pointBackgroundColor = yVals.map((_, i) => i === currentIdx ? '#ffea00' : '#38bdf8');
+    chart.data.datasets[0].pointBorderColor = yVals.map((_, i) => i === currentIdx ? '#ffffff' : '#0284c7');
+    chart.data.datasets[0].pointBorderWidth = yVals.map((_, i) => i === currentIdx ? 3 : 1);
+    chart.update('none');
+  }
+
+  // Actualizar botón de año activo
+  const anio = d.year;
+  document.querySelectorAll('.btn-yr').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.year == anio);
+  });
+}
+
+function actualizarTodo() {
+  actualizarGrafica();
+  actualizarVisor();
+  renderizarTabla();
+}
+
+function cambiarPaso(delta) {
+  currentIdx = (currentIdx + delta + DATA.length) % DATA.length;
+  actualizarVisor();
+}
+
+function irAlIndice(idx) {
+  currentIdx = Math.max(0, Math.min(DATA.length - 1, idx));
+  actualizarVisor();
+}
+
+function saltarAnio(anio) {
+  const idx = DATA.findIndex(d => d.year === anio);
+  if (idx !== -1) {
+    irAlIndice(idx);
+  }
+}
+
+function togglePlay() {
+  const btn = document.getElementById('btnPlay');
+  if (playInterval) {
+    clearInterval(playInterval);
+    playInterval = null;
+    btn.textContent = '▶ Reproducir Timelapse';
+    btn.classList.remove('playing');
+  } else {
+    btn.textContent = '⏸ Pausar Timelapse';
+    btn.classList.add('playing');
+    playInterval = setInterval(() => {
+      cambiarPaso(1);
+    }, playSpeed);
+  }
+}
+
+function cambiarVelocidad() {
+  playSpeed = parseInt(document.getElementById('selSpeed').value);
+  if (playInterval) {
+    togglePlay();
+    togglePlay();
+  }
+}
+
+function crearBotonesAnios() {
+  const anios = [...new Set(DATA.map(d => d.year))].sort();
+  const cont = document.getElementById('yearJumpsCont');
+  cont.innerHTML = '';
+  anios.forEach(y => {
+    const tomasAnio = DATA.filter(d => d.year === y).length;
+    const btn = document.createElement('button');
+    btn.className = 'btn-yr';
+    btn.dataset.year = y;
+    btn.textContent = `${y} (${tomasAnio})`;
+    btn.onclick = () => saltarAnio(y);
+    cont.appendChild(btn);
+  });
+}
+
+function renderizarTabla() {
+  const mod = document.getElementById('selModelo').value;
+  const reg = document.getElementById('selEscenario').value;
+  const tbody = document.getElementById('tbodyTabla');
+  tbody.innerHTML = '';
+
+  DATA.forEach((d, i) => {
+    const dM = (d.datos[mod] || {})[reg] || { blancos: 0, negros: 0, ha: 0, km2: 0, pct: 0 };
+    const dG = (d.datos['gt'] || {})[reg] || { ha: 0 };
+    const dif = (dM.ha - dG.ha).toFixed(1);
+    const tr = document.createElement('tr');
+    tr.id = `row-${i}`;
+    tr.onclick = () => irAlIndice(i);
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td><b>${d.fecha_fmt}</b></td>
+      <td>${d.year}</td>
+      <td><span style="background:#1e293b;padding:2px 6px;border-radius:4px;font-size:.78rem">${d.sat}</span></td>
+      <td style="color:var(--ok);font-weight:700">${dM.blancos.toLocaleString()} px</td>
+      <td style="color:var(--mu)">${dM.negros.toLocaleString()} px</td>
+      <td><b style="color:var(--ac)">${dM.ha.toFixed(2)} ha</b></td>
+      <td>${dG.ha.toFixed(2)} ha</td>
+      <td style="color:${Math.abs(dif)<15 ? 'var(--ok)' : (Math.abs(dif)<35 ? 'var(--wa)' : 'var(--er)')}">${dif >= 0 ? '+' : ''}${dif} ha</td>
+      <td style="color:#38bdf8;font-weight:700">${dM.pct.toFixed(2)}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  actualizarFilaActiva();
+}
+
+function actualizarFilaActiva() {
+  document.querySelectorAll('#tbodyTabla tr').forEach(r => r.classList.remove('active-row'));
+  const row = document.getElementById(`row-${currentIdx}`);
+  if (row) {
+    row.classList.add('active-row');
+  }
+}
+
+function filtrarTabla() {
+  const query = document.getElementById('filtroTabla').value.toLowerCase();
+  document.querySelectorAll('#tbodyTabla tr').forEach((tr, idx) => {
+    const d = DATA[idx];
+    const text = `${d.fecha} ${d.fecha_fmt} ${d.year} ${d.sat}`.toLowerCase();
+    tr.style.display = text.includes(query) ? '' : 'none';
+  });
+}
+
+function descargarCSV() {
+  const mod = document.getElementById('selModelo').value;
+  const reg = document.getElementById('selEscenario').value;
+  let csv = 'Indice,Fecha,Fecha_Fmt,Anio,Mes,Satelite,Escenario_ROI,Modelo,Pixeles_Salar,Pixeles_Fondo,Area_ha,Area_km2,Cobertura_pct,GT_ha,Dif_ha\n';
+  DATA.forEach((d, i) => {
+    const dM = (d.datos[mod] || {})[reg] || { blancos: 0, negros: 0, ha: 0, km2: 0, pct: 0 };
+    const dG = (d.datos['gt'] || {})[reg] || { ha: 0 };
+    const dif = (dM.ha - dG.ha).toFixed(2);
+    csv += `${i+1},${d.fecha},"${d.fecha_fmt}",${d.year},${d.month},${d.sat},${reg},${mod},${dM.blancos},${dM.negros},${dM.ha},${dM.km2},${dM.pct},${dG.ha},${dif}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `salinas_estiaje_83tomas_${mod}_${reg}.csv`;
+  a.click();
+}
+
+// Inicialización
+window.addEventListener('DOMContentLoaded', () => {
+  crearBotonesAnios();
+  actualizarTodo();
+});
+</script>
+
+</body>
+</html>
